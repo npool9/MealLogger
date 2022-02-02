@@ -1,5 +1,6 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from view import View
 
 
 class MealLogger:
@@ -11,8 +12,12 @@ class MealLogger:
         """
         Initialize the Meal Logger controller
         """
-        print("Meal Logger Initialized.")
+        self._options = Options()
+        self._options.headless = True
+        self._driver = webdriver.Chrome(options=self._options)
+        self._view = View()
 
 
 if __name__ == "__main__":
     meal_logger = MealLogger()
+    meal_name = meal_logger._view.ask_for_meal()
