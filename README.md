@@ -1,6 +1,6 @@
 # Meal Logger
 
-Log meals into FitBit. Potentially more to come.
+Logs meals into FitBit for you because Apple won't. Potentially more to come.
 
 ## Notes
 Please insure you have chromedriver insalled at /usr/local/bin/
