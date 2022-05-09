@@ -5,8 +5,8 @@ class Meal:
     A meal object
     """
 
-    def __init__(self, meal_key, meal_name, calories, carbs, fat, protein,
-        sugar, fiber, sodium, website_name, recip_url):
+    def __init__(self, meal_key=None, meal_name=None, calories=None, carbs=None, fat=None, protein=None,
+        sugar=None, fiber=None, sodium=None, website_name=None, recipe_url=None):
         """
         Initialize the meal object
         """

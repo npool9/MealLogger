@@ -26,8 +26,8 @@ def run():
     """
     meal_logger = MealLogger()
     meal_name = meal_logger._view.ask_for_meal()
-    # check database?
-    meal_row = meal_logger._model.check_for_meal(meal_name)
+    meal = meal_logger._model.check_for_meal(meal_name)
+    
 
 
 if __name__ == "__main__":
