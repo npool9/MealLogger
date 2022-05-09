@@ -6,6 +6,7 @@ class Model:
     """
     The model of the Model View Controller (MVC) paradigm
     """
+
     def __init__(self):
         """
         Initialize
@@ -20,6 +21,8 @@ class Model:
         """
         Check the database for existence of a meal with the given name
         :param meal_name; the name of the meal (str)
+        :return: the meal (list of column values if exists, None if does not exist)
         """
-        query = ""
-        print("Checking for meal...")
+        query = "SELECT * FROM meal_data WHERE UPPER(meal_name) = \'" + meal_name.upper() + "\';"
+        self._cursor.execute(query)
+        return meal

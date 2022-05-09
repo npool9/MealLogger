@@ -42,11 +42,9 @@ class DatabaseUtility:
             print('Connecting to the PostgreSQL database...')
             conn = psycopg2.connect(**credentials)
             cur = conn.cursor()
-            print('PostgreSQL database version:')
             cur.execute('SELECT version()')
             db_version = cur.fetchone()
-            print(db_version)
-            cur.close()
+            print("Successfully connected to database")
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
         return conn, cur
