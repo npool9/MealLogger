@@ -1,5 +1,3 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from view import View
 from model import Model
 
@@ -13,9 +11,6 @@ class MealLogger:
         """
         Initialize the Meal Logger controller
         """
-        self._options = Options()
-        self._options.headless = True
-        self._driver = webdriver.Chrome(options=self._options)
         self._view = View()
         self._model = Model()
 
@@ -26,8 +21,18 @@ def run():
     """
     meal_logger = MealLogger()
     meal_name = meal_logger._view.ask_for_meal()
-    meal = meal_logger._model.check_for_meal(meal_name)
-    
+    meal, exists = meal_logger._model.check_for_meal(meal_name)
+    if not exists:  # TODO
+        # Get list of ingredients from a website
+        print("Meal does not exist")
+        print("Search for meal...")
+        meal._meal_name = meal_name
+        ingredient_list = meal_logger._model.find_meal(meal)
+        for ingredient in ingredient_list:
+            print(ingredient)
+    else:  # meal exists
+        print("Meal exists")
+        pass
 
 
 if __name__ == "__main__":
