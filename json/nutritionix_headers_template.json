@@ -1,0 +1,5 @@
+{
+  "Content-Type": "application/json",
+  "x-app-id": "${api_id}",
+  "x-app-key": "${api_key}"
+}
