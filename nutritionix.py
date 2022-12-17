@@ -71,5 +71,7 @@ class Nutritionix:
 
 
 if __name__ == "__main__":
+    # For testing
     nutritionix = Nutritionix()
     response = nutritionix.query_natural_language("egg").text
+    print(response)

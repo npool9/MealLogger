@@ -22,14 +22,17 @@ def run():
     meal_logger = MealLogger()
     meal_name = meal_logger._view.ask_for_meal()
     meal, exists = meal_logger._model.check_for_meal(meal_name)
+    print("Meal:", meal)
     if not exists:
         # Get list of ingredients from a website
         print("Meal does not exist")
         print("Searching for meal...")
-        meal._meal_name = meal_name
+        meal.meal_name = meal_name
         ingredient_list = meal_logger._model.find_meal(meal)
-        for ingredient in ingredient_list:
-            print(ingredient)
+        print("Found ingredients list")
+        # TODO
+        print("Building meal object...")
+        meal_logger._model.build_meal(meal, ingredient_list)
     else:  # meal exists
         print("Meal exists")
         pass

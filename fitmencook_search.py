@@ -4,6 +4,7 @@ from selenium.webdriver.common.by import By
 
 class FitMenCook(RecipeSearch):
     """
+    Inherits properties and functions from RecipeSearch class
     Utilities for navigating and retrieving data from the FitMenCook recipe website
     """
 
@@ -27,13 +28,14 @@ class FitMenCook(RecipeSearch):
         recipe_element.click()  # click on first element result
         return self._driver.current_url
 
-    def get_ingredients(self):
+    def get_ingredients(self, meal):
         """
         Get list of ingredients
+        :parameter meal: the (mostly) empty meal object
         :return: list of ingredients for the recipe with measurements (list of str)
         """
         recipe_url = self.search_for_meal()
-        print("Recipe URL:", recipe_url)
+        meal.recipe_url = recipe_url
         ingredient_list_element = self._driver.find_element_by_xpath('//*[@class="recipe-ingredients gap-bottom-small"]/ul')
         ingredients = ingredient_list_element.find_elements(By.XPATH, "li")
         ingredients = [ingredient.text for ingredient in ingredients]

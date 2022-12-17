@@ -41,6 +41,19 @@ class Model:
         :param meal: the meal object that's not already in database (str)
         :return: list of ingredients
         """
-        print(self.supported_websites)
+        # TODO: Ask user for the website to search
+        print("Suported Websites:", self.supported_websites)
         search = FitMenCook(meal)
-        return search.get_ingredients()
+        return search.get_ingredients(meal)
+
+    def build_meal(self, meal, ingredients):
+        """
+        Build the full meal object from the list of ingredients provided and
+        the meal object template. Query the Nutritionix API for nutrition
+        information
+        :param meal: the empty Meal object (except for meal_name)
+        :param ingredients: list of ingredients (list of str) that needs parsed
+            for ingredient name and measurements
+        :return: complete Meal object
+        """
+        meal.describe()
