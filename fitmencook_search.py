@@ -13,8 +13,9 @@ class FitMenCook(RecipeSearch):
         Initialize utilities for FitMenCook website navigation
         """
         super().__init__(meal_name)
-        self.base_url = "https://fitmencook.com/"
-        self.search_url = self.base_url + "?s="
+        self._name = "FitMenCook"
+        self._base_url = "https://fitmencook.com/"
+        self._search_url = self._base_url + "?s="
 
     def search_for_meal(self):
         """
@@ -22,7 +23,7 @@ class FitMenCook(RecipeSearch):
         :param meal_name: the name of the meal (str)
         :return: the url to the recipe (str)
         """
-        search_url = self.search_url + self.meal_name.replace(' ', '+')
+        search_url = self._search_url + self.meal_name.replace(' ', '+')
         self._driver.get(search_url)
         recipe_element = self._driver.find_element_by_xpath('//*[@class="fit-post"]')
         recipe_element.click()  # click on first element result
@@ -36,6 +37,7 @@ class FitMenCook(RecipeSearch):
         """
         recipe_url = self.search_for_meal()
         meal.recipe_url = recipe_url
+        meal.website_name = self._name
         ingredient_list_element = self._driver.find_element_by_xpath('//*[@class="recipe-ingredients gap-bottom-small"]/ul')
         ingredients = ingredient_list_element.find_elements(By.XPATH, "li")
         ingredients = [ingredient.text for ingredient in ingredients]
