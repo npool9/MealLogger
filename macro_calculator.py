@@ -1,3 +1,5 @@
+import ingedients_parser import IngredientsParser
+
 # TODO; pass everything through the ingredient parser
 class MacroCalculator:
     """
@@ -10,6 +12,14 @@ class MacroCalculator:
         :param ingredients: list of ingredient and their measurements (as str)
         """
         self._ingredients = ingredients
+
+    def parse(self):
+        """
+        Parse each of the ingredients for their measurement
+        :return: dictionary of ingredient (str) -> value + unit of measurement (str)
+        """
+        parser = IngredientsParser()
+        
 
 
 if __name__ == "__main__":
