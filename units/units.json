@@ -1,0 +1,220 @@
+{
+  "cup": [
+    "cp.",
+    "cp",
+    "cups",
+    "cps",
+    "cps.",
+    "cup",
+    "c.",
+    "c"
+  ],
+  "glass": [
+    "glass",
+		"glas",
+		"gls"
+	],
+  "bowl": [
+    "bowl",
+		"bowls",
+		"bwl"
+	],
+  "bottle": [
+    "btl.",
+    "btl",
+    "bottles",
+    "bottle",
+    "btl.",
+    "btl"
+  ],
+  "gallon": [
+    "gallons",
+		"gallon",
+		"gal.",
+		"gal"
+	],
+  "ounce": [
+    "onces",
+		"once",
+		"oz.",
+		"oz",
+		"oc.",
+		"oc",
+		"ounces",
+		"ounce"
+	],
+  "fluid ounce": [
+    "fluid ounce",
+    "fluid oz",
+    "fluid oz.",
+    "fl. ounce",
+    "fl. oz.",
+    "fl oz",
+    "oz.",
+    "oz",
+    "fl. oz",
+    "fluid ounces",
+    "fl. ounces",
+  ],
+  "pint": [
+    "pt.",
+		"pt",
+		"pints",
+		"pint"
+	],
+  "pound": [
+    "pounds",
+		"pound",
+		"lbs.",
+		"lbs",
+		"lb.",
+		"lb"
+	],
+  "quart": [
+    "quarts",
+		"quart",
+		"qts.",
+		"qts",
+		"qt.",
+		"qt"
+	],
+  "tablespoon": [
+    "tbs.",
+    "tbs",
+    "tbl",
+    "tbl.",
+    "T.",
+    "T",
+    "tablespoons",
+    "tablespoon",
+    "spoon",
+    "tbsp.",
+    "tbs.",
+    "tbs",
+    "tbsp",
+    "tbsp"
+  ],
+  "teaspoon": [
+    "teaspoons",
+    "teaspoon",
+    "tsp.",
+    "tsp",
+    "t.",
+    "t"
+  ],
+  "kg": [
+    "kilogrammes",
+    "kilogramme",
+    "kilos",
+    "kilo",
+    "kg.",
+    "kg",
+    "kilograms",
+    "kilogram"
+  ],
+  "g": [
+    "grammes",
+		"gramme",
+		"gr.",
+		"gr",
+		"g.",
+		"g",
+		"grams",
+		"gram"
+	],
+  "l": [
+		"lit.",
+		"l.",
+		"l",
+		"L",
+		"liters",
+		"liter"
+	],
+  "dcl": [
+		"dclit.",
+		"dcl.",
+		"dl"
+	],
+  "cl": ["centilitres",
+		"cl.",
+		"cl",
+		"centiliters",
+		"centiliter"
+	],
+  "mg": [
+    "milligrams",
+    "milligram",
+    "mlg.",
+    "mlg",
+    "mg.",
+    "mg"
+  ],
+  "ml": [
+    "millilitres",
+    "milliliters",
+    "milliliter",
+    "millilitre",
+    "mlt",
+    "ml.",
+    "ml",
+    "mL",
+    "mL."
+  ],
+  "zest": [
+    "zeste",
+		"zest",
+		"zst"
+	],
+  "handful": [
+    "handfuls",
+    "handful",
+    "hdful",
+    "hdfl",
+    "hdf"
+  ],
+  "pinch": [
+    "pinches",
+    "pinch",
+    "pinche",
+    "pch"
+  ],
+  "touch": [
+    "touches",
+    "touch",
+		"tch"
+	],
+  "slice": [
+    "slices",
+		"slice"
+	],
+  "packet": [
+    "paquets",
+		"paquets",
+		"packets",
+		"packet",
+		"pck"
+	],
+  "envelope": [
+    "envelopes",
+		"envelope"
+	],
+  "splash": [
+    "splashes",
+    "splash"
+  ],
+  "sprig": [
+    "sprigs",
+		"sprig"
+	],
+  "sheet": [
+    "sheets",
+		"sheet"
+	],
+  "bag": [
+    "bags",
+		"bag"
+	],
+  "dose": [
+    "doses",
+		"dose"]
+}
