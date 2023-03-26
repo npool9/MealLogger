@@ -1,7 +1,7 @@
 from meal import Meal
 from database_utility import DatabaseUtility
 from fitmencook_search import FitMenCook
-
+from ingredient_parser import IngredientParser
 
 class Model:
     """
@@ -18,6 +18,7 @@ class Model:
         creds = self._db_util.get_credentials()
         self._connection, self._cursor = self._db_util.connect(creds)
         self._meal_list = []
+        self._ingredient_parser = IngredientParser()
 
     def check_for_meal(self, meal_name):
         """
@@ -56,4 +57,7 @@ class Model:
             for ingredient name and measurements
         :return: complete Meal object
         """
+        for full_ingredient in ingredients:
+            print(full_ingredient)
+            self._ingredient_parser.parse(full_ingredient)
         meal.describe()

@@ -54,7 +54,7 @@
     "oz",
     "fl. oz",
     "fluid ounces",
-    "fl. ounces",
+    "fl. ounces"
   ],
   "pint": [
     "pt.",
@@ -216,5 +216,6 @@
 	],
   "dose": [
     "doses",
-		"dose"]
+		"dose"
+  ]
 }

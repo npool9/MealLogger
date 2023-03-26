@@ -29,6 +29,7 @@ def run():
         meal.meal_name = meal_name
         ingredient_list = meal_logger._model.find_meal(meal)
         print("Found ingredients list")
+        print(ingredient_list)
         # TODO
         print("Building meal object...")
         meal_logger._model.build_meal(meal, ingredient_list)

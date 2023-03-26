@@ -1,3 +1,5 @@
 database.ini
 api_credentials.ini
 response_columns.txt
+__pycache__/
+*.pyc
