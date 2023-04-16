@@ -58,6 +58,5 @@ class Model:
         :return: complete Meal object
         """
         for full_ingredient in ingredients:
-            print(full_ingredient)
             self._ingredient_parser.parse(full_ingredient)
         meal.describe()
