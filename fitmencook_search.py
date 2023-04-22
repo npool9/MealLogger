@@ -25,7 +25,7 @@ class FitMenCook(RecipeSearch):
         """
         search_url = self._search_url + self.meal_name.replace(' ', '+')
         self._driver.get(search_url)
-        recipe_element = self._driver.find_element_by_xpath('//*[@class="fit-post"]')
+        recipe_element = self._driver.find_element_by_xpath('//*[@class="fmc_grid_figure"]')
         recipe_element.click()  # click on first element result
         return self._driver.current_url
 
@@ -38,7 +38,7 @@ class FitMenCook(RecipeSearch):
         recipe_url = self.search_for_meal()
         meal.recipe_url = recipe_url
         meal.website_name = self._name
-        ingredient_list_element = self._driver.find_element_by_xpath('//*[@class="recipe-ingredients gap-bottom-small"]/ul')
+        ingredient_list_element = self._driver.find_element_by_xpath('//*[@class="fmc_ingredients"]/ul')
         ingredients = ingredient_list_element.find_elements(By.XPATH, "li")
         ingredients = [ingredient.text for ingredient in ingredients]
         return ingredients
