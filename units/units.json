@@ -217,5 +217,9 @@
   "dose": [
     "doses",
 		"dose"
+  ],
+  "spray": [
+    "spray",
+    "spray of"
   ]
 }
