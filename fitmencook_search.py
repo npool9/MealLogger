@@ -8,11 +8,12 @@ class FitMenCook(RecipeSearch):
     Utilities for navigating and retrieving data from the FitMenCook recipe website
     """
 
-    def __init__(self, meal_name):
+    def __init__(self, meal):
         """
         Initialize utilities for FitMenCook website navigation
+        :param meal: the initialized meal object -- mostly null attributes
         """
-        super().__init__(meal_name)
+        super().__init__(meal)
         self._name = "FitMenCook"
         self._base_url = "https://fitmencook.com/"
         self._search_url = self._base_url + "?s="
@@ -27,6 +28,8 @@ class FitMenCook(RecipeSearch):
         self._driver.get(search_url)
         recipe_element = self._driver.find_element_by_xpath('//*[@class="fmc_grid_figure"]')
         recipe_element.click()  # click on first element result
+        # replace meal name with full, official name
+        self.meal._meal_name = self._driver.find_element_by_xpath('//*[@class="fmc_title_1 title_spacing_3"]').text
         return self._driver.current_url
 
     def get_ingredients(self, meal):
