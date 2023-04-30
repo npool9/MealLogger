@@ -32,6 +32,9 @@ class IngredientParser:
         start_ind, end_ind = inds
         ingredient_dict["name"] = self.find_ingredient_name(found_unit, unparsed_ingredient, end_ind)
         ingredient_dict["amount"] = self.find_ingredient_amount(found_unit, unparsed_ingredient, start_ind, end_ind)
+        # Make sure amount isn't in name
+        if ingredient_dict["amount"] + ' ' in ingredient_dict["name"]:
+            ingredient_dict["name"] = ingredient_dict["name"].replace(ingredient_dict["amount"] + ' ', '')
         print("Ingredient Dict:", ingredient_dict, '\n')
 
     def find_ingredient_unit(self, unparsed_ingredient):
@@ -44,8 +47,6 @@ class IngredientParser:
             3. the found version of the unit (i.e. not the parent unit)
         """
         # search for valid unit
-        unit_found = False
-        descriptor_unit_found = False
         # unit_formats = [surround_by_spaces, in_parentheses]
         for key in self._valid_units:
             for unit in self._valid_units[key]:
@@ -61,7 +62,7 @@ class IngredientParser:
                 if unparsed_ingredient.endswith(unit):
                     return key, (len(unparsed_ingredient)-len(unit), len(unparsed_ingredient)), unit  # the parent descriptor unit is "key"
                 elif unparsed_ingredient.startswith(unit):
-                    return key, (0, len(unit)-1), unit   # the parent descriptor unit is "key"
+                    return key, (0, len(unit)), unit   # the parent descriptor unit is "key"
         return None, (0, 0), None
 
     def find_ingredient_name(self, unit, unparsed_ingredient, ind):
@@ -72,8 +73,9 @@ class IngredientParser:
         :param ind: the index of the end of the unit in the unparsed ingredient
         :return: the ingredient name
         """
+        # TODO: this needs to be fixed -- consider "Juice from" scenario
         stop_chars = ['(', ',']
-        start_chars = ['(']
+        start_chars = ['(', ')']
         if unit:  # unit found
             ingredient_name = unparsed_ingredient[ind:].strip()
         else:  # No unit, there will just be a count/amount
@@ -88,12 +90,15 @@ class IngredientParser:
         for c in stop_chars:
             if c in ingredient_name:
                 ingredient_name = ingredient_name[:ingredient_name.rindex(c)]
-        # print(ingredient_name)
-        return ingredient_name
+        # Last ditch effort to get ingredient name
+        # Examples: "... to taste", etc.
+        if not ingredient_name.strip() and unit in self._valid_descriptor_units:
+            ingredient_name = unparsed_ingredient.replace(unit, '')
+        return ingredient_name.strip()
 
     def find_ingredient_amount(self, unit, unparsed_ingredient, start_ind, end_ind):
         """
-        Find the ingredient aamount in the full, unparsed ingredient
+        Find the ingredient amount in the full, unparsed ingredient
         :param unit: the unit of the ingredient
         :param unparsed_ingredient: a full ingredient of the recipe
         :param start_ind: the index of the start of the unit in the unparsed ingredient
@@ -149,7 +154,7 @@ class IngredientParser:
         :return: a match object for the regular expression
         """
         unit = unit.replace('.', "\.")
-        return re.search("\(~?\d*(" + unit + ")\)", unparsed_ingredient)
+        return re.search("\(~?\d*\.?\d*\s?(" + unit + ")\)", unparsed_ingredient)
 
     def right_beside_num(self, unit, unparsed_ingredient):
         """
@@ -169,7 +174,7 @@ class IngredientParser:
         :param parsed_ingredient: the ingredient but some unnecessary info has been removed
         :return: a match object for the regular expression
         """
-        return re.search("(\d+)?\s?\d+\/?\d*", parsed_ingredient)
+        return re.search("(\d+)?\s?\d+\/?\.?\d*", parsed_ingredient)
 
     def check_for_number(self, unparsed_ingredient):
         """
