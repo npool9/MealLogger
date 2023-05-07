@@ -50,7 +50,10 @@ class IngredientParser:
         # unit_formats = [surround_by_spaces, in_parentheses]
         for key in self._valid_units:
             for unit in self._valid_units[key]:
-                matches = [self.surround_by_spaces(unit, unparsed_ingredient), self.in_parentheses(unit, unparsed_ingredient), self.right_beside_num(unit, unparsed_ingredient)]
+                matches = [self.after_dash(unit, unparsed_ingredient),
+                self.surround_by_spaces(unit, unparsed_ingredient),
+                self.in_parentheses(unit, unparsed_ingredient),
+                self.right_beside_num(unit, unparsed_ingredient)]
                 matches = [m for m in matches if m]  # Get matches
                 try:
                     match = matches[0]  # Get first match
@@ -73,11 +76,14 @@ class IngredientParser:
         :param ind: the index of the end of the unit in the unparsed ingredient
         :return: the ingredient name
         """
-        # TODO: this needs to be fixed -- consider "Juice from" scenario
         stop_chars = ['(', ',']
         start_chars = ['(', ')']
         if unit:  # unit found
             ingredient_name = unparsed_ingredient[ind:].strip()
+            if not len(ingredient_name.strip()):  # no ingredient found
+                # check for dash -- sometimes ingredient names happen before the dash
+                if '\u2013' in unparsed_ingredient:
+                    ingredient_name = unparsed_ingredient[:unparsed_ingredient.index('\u2013')]
         else:  # No unit, there will just be a count/amount
             # remove the first word from the ingredient, that is likely the amount
             temp_list = unparsed_ingredient.split(' ')
@@ -128,7 +134,7 @@ class IngredientParser:
         match = self.parse_for_amount(ingredient_amount)
         if match:
             # print("Found amount " + str(match.group()) + ": " + unparsed_ingredient)
-            return match.group()
+            return match.group().strip()
         else:
             print("Unit:", unit)
             raise Exception("Could not find ingredient amount: ", unparsed_ingredient)
@@ -168,13 +174,27 @@ class IngredientParser:
         unit = unit.replace('.', "\.")
         return re.search("\d+(" + unit + ")\s", unparsed_ingredient)
 
+    def after_dash(self, unit, unparsed_ingredient):
+        """
+        Units can be formatted in a variety of ways in a recipe
+        This one checks to see if the unit and number occurs after a dash
+          e.g. -- 1/2 T
+        :param unit: a valid unit
+        :param unparsed_ingredient: a full ingredient of the recipe
+        :return: a match object for the regular expression
+        """
+        unit = unit.replace('.', "\.")
+        return re.search("[\u2013]+.+(" + unit + ')', unparsed_ingredient)
+
+
     def parse_for_amount(self, parsed_ingredient):
         """
         The RegEx for parsing the amount from an abridged version of the full ingredient
         :param parsed_ingredient: the ingredient but some unnecessary info has been removed
         :return: a match object for the regular expression
         """
-        return re.search("(\d+)?\s?\d+\/?\.?\d*", parsed_ingredient)
+        print("Parsed Ingredient:", parsed_ingredient)
+        return re.search("\d?\d?\s?\d+\/?\.?\d*(?!%)", parsed_ingredient)
 
     def check_for_number(self, unparsed_ingredient):
         """
