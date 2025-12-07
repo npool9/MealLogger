@@ -2,6 +2,8 @@ from meal import Meal
 from database_utility import DatabaseUtility
 from fitmencook_search import FitMenCook
 from ingredient_parser import IngredientParser
+from flyway import Flyway
+
 
 class Model:
     """
@@ -13,12 +15,27 @@ class Model:
         Initialize
         """
         self.supported_websites = ["fitmencook"]
+        # Flyway parameters
+        self._init_db_name = "public"
+        self._meal_table_order = ["meals", "ingredients", "meal_ingredient_bridge"]
         # Open a database connection
         self._db_util = DatabaseUtility()
-        creds = self._db_util.get_credentials()
-        self._connection, self._cursor = self._db_util.connect(creds)
+        self.creds = self._db_util.get_credentials()
+        self.run_flyway()
+        self._connection, self._cursor = self._db_util.connect(self.creds)
         self._meal_list = []
         self._ingredient_parser = IngredientParser()
+
+    def run_flyway(self):
+        """
+        Run flyway step for database
+        """
+        flyway = Flyway()
+        print(f"Creating database {self.creds["meal_db"]}...")
+        flyway.create_database(self.creds["meal_db"])
+        for table in self._meal_table_order:
+            print(f"Creating table {table}...")
+            flyway.create_table(table)
 
     def check_for_meal(self, meal_name):
         """

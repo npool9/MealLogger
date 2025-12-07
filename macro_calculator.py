@@ -1,6 +1,7 @@
-import ingedients_parser import IngredientsParser
+from ingredient_parser import IngredientParser
 
-# TODO; pass everything through the ingredient parser
+
+# TODO: pass everything through the ingredient parser
 class MacroCalculator:
     """
     Functions to calculate the macros of a meal
@@ -18,7 +19,7 @@ class MacroCalculator:
         Parse each of the ingredients for their measurement
         :return: dictionary of ingredient (str) -> value + unit of measurement (str)
         """
-        parser = IngredientsParser()
+        parser = IngredientParser()
         
 
 

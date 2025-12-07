@@ -16,7 +16,7 @@ class DatabaseUtility:
 
     def get_credentials(self):
         """
-        Parse the database ini file (supplied in self._datbase_ini class
+        Parse the database ini file (supplied in self._database_ini class
             variable) for database credentials
         :return: dictionary of credentials based on ini file
         """
@@ -38,15 +38,23 @@ class DatabaseUtility:
         :return: the (open) database connection and cursor objects
         """
         conn = None
+        cur = None
         try:
             print('Connecting to the PostgreSQL database...')
-            conn = psycopg2.connect(**credentials)
+            password = input(f"Please enter your database password for {credentials["user"]}:")
+            conn = psycopg2.connect(
+                host=credentials["host"],
+                user=credentials["user"],
+                password=password,
+                dbname=credentials["meal_db"],
+                port=credentials["port"]  # Connect to a default database to create others
+            )
             cur = conn.cursor()
             cur.execute('SELECT version()')
             db_version = cur.fetchone()
             print("Successfully connected to database")
         except (Exception, psycopg2.DatabaseError) as error:
-            print(error)
+            raise Exception(error)
         return conn, cur
 
     def disconnect(self, conn):
@@ -57,3 +65,4 @@ class DatabaseUtility:
         conn.cursor.close()
         conn.close()
         print("Connection to database has been closed.")
+
