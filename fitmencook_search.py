@@ -1,5 +1,7 @@
 from recipe_search import RecipeSearch
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 
 class FitMenCook(RecipeSearch):
@@ -26,10 +28,17 @@ class FitMenCook(RecipeSearch):
         """
         search_url = self._search_url + self.meal_name.replace(' ', '+')
         self._driver.get(search_url)
-        recipe_element = self._driver.find_element_by_xpath('//*[@class="fmc_grid_figure"]')
+        try:
+            WebDriverWait(self._driver, 5).until(
+                EC.presence_of_element_located((By.XPATH, "//*[@class=\"fmc_grid_figure\"]"))
+            )
+        except:
+            self._driver.quit()
+            raise Exception("Recipe results did not load")
+        recipe_element = self._driver.find_element(By.XPATH, '//*[@class="fmc_grid_figure"]')
         recipe_element.click()  # click on first element result
         # replace meal name with full, official name
-        self.meal._meal_name = self._driver.find_element_by_xpath('//*[@class="fmc_title_1 title_spacing_3"]').text
+        self.meal._meal_name = self._driver.find_element(By.XPATH, '//*[@class="fmc_title_1 title_spacing_3"]').text
         return self._driver.current_url
 
     def get_ingredients(self, meal):
@@ -41,7 +50,7 @@ class FitMenCook(RecipeSearch):
         recipe_url = self.search_for_meal()
         meal.recipe_url = recipe_url
         meal.website_name = self._name
-        ingredient_list_element = self._driver.find_element_by_xpath('//*[@class="fmc_ingredients"]/ul')
+        ingredient_list_element = self._driver.find_element(By.XPATH, '//*[@class="fmc_ingredients"]/ul')
         ingredients = ingredient_list_element.find_elements(By.XPATH, "li")
         ingredients = [ingredient.text for ingredient in ingredients]
         return ingredients
