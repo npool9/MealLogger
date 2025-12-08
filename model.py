@@ -64,7 +64,7 @@ class Model:
         search = FitMenCook(meal)
         ingredient_list = search.get_ingredients(meal)
         # post process ingredient list
-        ingredient_list = self.post_process(ingredient_list)
+        # ingredient_list = self.post_process(ingredient_list)
         return ingredient_list
 
     def build_meal(self, meal, ingredients):
@@ -78,7 +78,8 @@ class Model:
         :return: complete Meal object
         """
         for full_ingredient in ingredients:
-            self._ingredient_parser.parse(full_ingredient)
+            # self._ingredient_parser.parse(full_ingredient)
+            print(full_ingredient)
         meal.describe()
 
     def post_process(self, ingredient_list):
