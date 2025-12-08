@@ -15,7 +15,7 @@ class Flyway:
         self.flyway_path = os.path.join(os.path.dirname(__file__), "database", "flyway", db_type)
         self.db_utility = DatabaseUtility()
         self.credentials = self.db_utility.get_credentials()
-        self.credentials["password"] = input(f"Please enter your database password for {self.credentials["user"]}:")
+        self.credentials["password"] = input(f"Please enter your database password for {self.credentials['user']}:")
         try:
             # Connect to the default 'postgres' database to create a new one
             self.conn = psycopg2.connect(

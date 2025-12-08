@@ -29,8 +29,9 @@ def run():
         meal.meal_name = meal_name
         ingredient_list = meal_logger._model.find_meal(meal)
         print("Found ingredients list")
-        # print(ingredient_list)
-        # TODO
+        # Send the parsed ingredients list to the view
+        ingredient_list = meal_logger._view.finalize_ingredients(ingredient_list)
+        # FIXME
         print("Building meal object...")
         meal_logger._model.build_meal(meal, ingredient_list)
     else:  # meal exists

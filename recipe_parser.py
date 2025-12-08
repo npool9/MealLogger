@@ -1,7 +1,3 @@
-# improved_recipe_parser.py
-# Requires: requests, beautifulsoup4
-# pip install requests beautifulsoup4
-
 import re
 from fractions import Fraction
 from html import unescape

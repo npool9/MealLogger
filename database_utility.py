@@ -42,7 +42,7 @@ class DatabaseUtility:
         cur = None
         try:
             print('Connecting to the PostgreSQL database...')
-            password = input(f"Please enter your database password for {credentials["user"]}:")
+            password = input(f"Please enter your database password for {credentials['user']}:")
             conn = psycopg2.connect(
                 host=credentials["host"],
                 user=credentials["user"],

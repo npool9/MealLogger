@@ -3,3 +3,4 @@ psycopg2-binary
 requests
 webdriver-manager
 beautifulsoup4
+PyQt6

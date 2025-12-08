@@ -18,9 +18,9 @@ class RecipeSearch:
         self.base_url = None
         self.search_url = None
         # Webscraping Utilities
-        self._driver = self.get_headless_driver(headless=False)
+        self._driver = self.get_driver(headless=True)
 
-    def get_headless_driver(self, headless=True):
+    def get_driver(self, headless=True):
         options = Options()
         if headless:
             options.headless = True
