@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 import psycopg2
+import os
 
 
 class DatabaseUtility:
@@ -12,7 +13,7 @@ class DatabaseUtility:
         Initialize database connection based on .ini file
         """
         self._config_section = "credentials"
-        self._database_ini = "database.ini"
+        self._database_ini = os.path.join(os.path.dirname(__file__), "database", "database.ini")
 
     def get_credentials(self):
         """

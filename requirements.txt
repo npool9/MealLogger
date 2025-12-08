@@ -1,3 +1,4 @@
 selenium
 psycopg2-binary
 requests
+webdriver-manager
