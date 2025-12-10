@@ -1,23 +1,35 @@
+# perfected_recipe_parser.py
+# Robust RecipeParser: JSON-LD, WPRM, glued units (2oz/10-oz), percentages, hyphenated amounts,
+# nested subsections, notes, and confidence levels.
+#
+# Requires: requests, beautifulsoup4
+# pip install requests beautifulsoup4
+
 import re
 from fractions import Fraction
 from html import unescape
 import requests
 from bs4 import BeautifulSoup
+from typing import List, Dict, Optional, Tuple, Any
 
 
 class RecipeParser:
-
     def __init__(self):
-        # ---------- (Reuse/extend unit maps & parsing helpers from your parser) ----------
+        # canonical units and many aliases (extendable)
         self.UNIT_ALIASES = {
-            "teaspoon": ["tsp", "t", "teaspoons", "tsps"],
-            "tablespoon": ["tbsp", "T", "tbl", "tablespoons", "tablespoon"],
-            "cup": ["c", "cups", "cupful", "cup"],
-            "gram": ["g", "grams", "gram", "gr"],
-            "ounce": ["oz", "ounces", "ounce"],
-            "pound": ["lb", "lbs", "pound", "pounds"],
-            "milliliter": ["ml", "millilitre", "milliliters"],
-            "liter": ["l", "litre", "liters", "litres"],
+            "teaspoon": ["tsp", "t", "teaspoons", "tsps", "tsp."],
+            "tablespoon": ["tbsp", "T", "tbl", "tablespoons", "tablespoon", "tbsp."],
+            "cup": ["c", "cups", "cupful", "cup", "cups."],
+            "gram": ["g", "grams", "gram", "gr", "g."],
+            "kilogram": ["kg", "kilograms", "kilogram", "kg."],
+            "ounce": ["oz", "ounces", "ounce", "oz."],
+            "fluid_ounce": ["fl oz", "floz", "fl. oz", "fl-oz"],
+            "pint": ["pt", "pint", "pints"],
+            "quart": ["qt", "quart", "quarts"],
+            "gallon": ["gal", "gallon", "gallons"],
+            "pound": ["lb", "lbs", "pound", "pounds", "lb."],
+            "milliliter": ["ml", "millilitre", "milliliters", "ml."],
+            "liter": ["l", "litre", "liters", "litres", "l."],
             "pinch": ["pinch", "pinches"],
             "dash": ["dash", "dashes"],
             "clove": ["clove", "cloves"],
@@ -27,34 +39,63 @@ class RecipeParser:
             "stick": ["stick", "sticks"],
             "piece": ["piece", "pieces"],
             "head": ["head", "heads"],
-            "bunch": ["bunch", "bunches"]
+            "bunch": ["bunch", "bunches"],
+            "stalk": ["stalk", "stalks"],
+            "sprig": ["sprig", "sprigs"],
+            "bag": ["bag", "bags"],
+            "box": ["box", "boxes"],
+            "jar": ["jar", "jars"],
         }
+        # unit lookup
         self.UNIT_MAP = {}
-        for can, aliases in self.UNIT_ALIASES.items():
+        for canon, aliases in self.UNIT_ALIASES.items():
             for a in aliases:
-                self.UNIT_MAP[a.lower()] = can
+                self.UNIT_MAP[a.lower()] = canon
 
+        # number words
         self.NUMBER_WORDS = {
             "a": 1, "an": 1, "one": 1, "two": 2, "three": 3, "four": 4,
             "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
             "half": 0.5, "quarter": 0.25, "dozen": 12
         }
 
+        # unicode fractions
         self.UNICODE_FRACTIONS = {
             '½': Fraction(1, 2), '⅓': Fraction(1, 3), '⅔': Fraction(2, 3),
             '¼': Fraction(1, 4), '¾': Fraction(3, 4), '⅛': Fraction(1, 8),
             '⅜': Fraction(3, 8), '⅝': Fraction(5, 8), '⅞': Fraction(7, 8)
         }
 
+        # regexes
         self.RE_UNICODE_FRAC = re.compile('|'.join(map(re.escape, self.UNICODE_FRACTIONS.keys())))
         self.RE_FRACTION = re.compile(r'(?P<int>\d+)?\s*(?P<num>\d+)\s*/\s*(?P<den>\d+)')
-        self.RE_RANGE = re.compile(r'(?P<a>\d+(?:[.,]\d+)?(?:\s*\d+/\d+)?)\s*(?:-|to|–|—)\s*(?P<b>\d+(?:[.,]\d+)?(?:\s*\d+/\d+)?)', re.I)
-        self.RE_WORD_NUMBER = re.compile(r'\b(' + '|'.join(sorted(self.NUMBER_WORDS.keys(), key=len, reverse=True)) + r')\b', re.I)
+        self.RE_RANGE = re.compile(
+            r'(?P<a>\d+(?:[.,]\d+)?(?:\s*\d+/\d+)?|\d+\s*%?)\s*(?:-|to|–|—)\s*(?P<b>\d+(?:[.,]\d+)?(?:\s*\d+/\d+)?|\d+\s*%?)',
+            re.I
+        )
+        self.RE_WORD_NUMBER = re.compile(
+            r'\b(' + '|'.join(sorted(self.NUMBER_WORDS.keys(), key=len, reverse=True)) + r')\b',
+            re.I
+        )
+        # number + unit glued to each other at start (e.g., '2oz', '10-oz')
+        self.RE_NUMUNIT = re.compile(r'^\s*(?P<num>\d+(?:[.,]\d+)?)(?:\s*-\s*)?(?P<unit>[A-Za-z%./]+)\b')
+        # percentage at start like "93%" possibly followed by descriptor
+        self.RE_PERCENT = re.compile(r'^\s*(?P<pct>\d+(?:[.,]\d+)?)\s*%(\s+|$)')
+        # hyphenated like '10-oz' anywhere
+        self.RE_HYPHEN_NUMUNIT = re.compile(r'(?P<num>\d+(?:[.,]\d+)?)-(?P<unit>[A-Za-z%./]+)\b')
 
-    def parse_fractional_number(self, s: str):
-        if not s: return None
+        # heuristics: UI labels to filter
+        self.UI_LABELS = set([
+            'optional', 'substitute', 'note', 'servings', 'ingredients for',
+            'show full recipe', 'print recipe', 'nutrition', 'calories'
+        ])
+
+    # ---------------------- low-level number parsing ----------------------
+    def parse_fractional_number(self, s: Optional[str]) -> Optional[float]:
+        if not s:
+            return None
         s = s.strip()
-        # unicode -> decimals
+        # replace unicode fractions with decimals
         def repl(m):
             return str(float(self.UNICODE_FRACTIONS[m.group(0)]))
         s2 = self.RE_UNICODE_FRAC.sub(repl, s)
@@ -63,256 +104,428 @@ class RecipeParser:
         if m:
             whole = int(m.group('int')) if m.group('int') else 0
             return float(whole + Fraction(int(m.group('num')), int(m.group('den'))))
+        # simple fraction like "3/4"
         if '/' in s2:
             try:
                 return float(Fraction(s2))
             except Exception:
                 pass
+        # plain number
         m2 = re.search(r'(?P<number>\d+(?:[.,]\d+)?)', s2)
         if m2:
-            return float(m2.group('number').replace(',', '.'))
+            try:
+                return float(m2.group('number').replace(',', '.'))
+            except Exception:
+                pass
+        # words like "half"
         m3 = self.RE_WORD_NUMBER.search(s2)
         if m3:
             return float(self.NUMBER_WORDS[m3.group(0).lower()])
         return None
 
-    def find_unit_and_name_after_amount(self, rest: str):
+    # ---------------------- unit detection ----------------------
+    def _map_unit_candidate(self, token: str) -> Optional[str]:
+        if not token:
+            return None
+        t = token.lower().rstrip('.').strip()
+        # try direct
+        if t in self.UNIT_MAP:
+            return self.UNIT_MAP[t]
+        # try with spaces removed (e.g., 'floz' already in map, but check)
+        t2 = t.replace(' ', '')
+        if t2 in self.UNIT_MAP:
+            return self.UNIT_MAP[t2]
+        return None
+
+    def find_unit_and_name_after_amount(self, rest: str) -> Tuple[Optional[str], str]:
+        """
+        Look at the start of `rest` and return (unit_canonical, remainder_name)
+        tolerant to punctuation and two-word units ("fl oz").
+        """
         rest = (rest or '').strip()
-        if not rest: return None, ''
+        if not rest:
+            return None, ''
+
+        # try two-word unit first
         tokens = rest.split()
-        for take in (2,1):
+        for take in (2, 1):
             candidate = ' '.join(tokens[:take]).lower().rstrip('.,;()')
-            candidate_clean = re.sub(r'[^a-zA-Z%/]+', '', candidate)
-            if candidate_clean in self.UNIT_MAP:
-                return self.UNIT_MAP[candidate_clean], ' '.join(tokens[take:]).strip()
+            # keep letters, %, ., / and spaces
+            candidate_clean = re.sub(r'[^a-zA-Z%./\s]+', '', candidate).strip()
+            mapped = self._map_unit_candidate(candidate_clean)
+            if mapped:
+                return mapped, ' '.join(tokens[take:]).strip()
+
+        # as fallback, if the first token is punctuation-stripped and maps
         first = tokens[0].lower().rstrip('.,;()')
-        if first in self.UNIT_MAP:
-            return self.UNIT_MAP[first], ' '.join(tokens[1:]).strip()
+        mapped_first = self._map_unit_candidate(re.sub(r'[^a-zA-Z%./]+', '', first))
+        if mapped_first:
+            return mapped_first, ' '.join(tokens[1:]).strip()
+
+        # also check pattern like "oz." at the very start (regex)
+        m = re.match(r'^(?P<u>[A-Za-z%./]+)\b', rest)
+        if m:
+            maybe = m.group('u').rstrip('.')
+            if self._map_unit_candidate(maybe):
+                return self._map_unit_candidate(maybe), rest[m.end():].strip()
+
         return None, rest
 
-    def normalize_ingredient_name(self, name: str):
+    # ---------------------- normalize name ----------------------
+    def normalize_ingredient_name(self, name: Optional[str]) -> Optional[str]:
+        if name is None:
+            return None
         name = name.strip()
-        name = re.sub(r'\s*\((?:[^()]*)\)\s*$', '', name)  # drop trailing parentheses notes
+        # strip trailing parentheses describing packaging/notes
+        name = re.sub(r'\s*\((?:[^()]*)\)\s*$', '', name)
         name = re.sub(r'\s+', ' ', name)
-        return unescape(name)
+        return unescape(name).strip()
 
-    def parse_ingredient_line(self, line: str):
+    # ---------------------- parse single ingredient line ----------------------
+    def parse_ingredient_line(self, line: str) -> Optional[Dict[str, Any]]:
+        """
+        Parse a single ingredient line into structure:
+          { original, amount (float or {'min','max'}), unit, name, notes, subsection, confidence }
+        """
         orig = (line or '').strip()
-        if not orig: return None
+        if not orig:
+            return None
+
         w = re.sub(r'^[\-\u2022]\s*', '', orig)  # strip bullets
-        # handle ranges and amounts
-        range_m = self.RE_RANGE.search(w)
-        amt = None
-        if range_m:
-            a = self.parse_fractional_number(range_m.group('a'))
-            b = self.parse_fractional_number(range_m.group('b'))
-            amt = {'min': a, 'max': b}
-            w = self.RE_RANGE.sub('', w, count=1).strip(',;: ')
-        else:
-            # unicode fraction or numeric start
-            u = self.RE_UNICODE_FRAC.match(w.lstrip())
-            if u:
-                amt = self.parse_fractional_number(u.group(0))
-                w = w[u.end():].strip()
-            else:
-                m = re.match(r'^\s*(?P<num>(?:\d+\s+\d+/\d+)|(?:\d+/\d+)|(?:\d+(?:[.,]\d+)?))\b', w)
-                if m:
-                    amt = self.parse_fractional_number(m.group('num'))
-                    w = w[m.end():].strip()
-                else:
-                    m2 = self.RE_WORD_NUMBER.match(w)
-                    if m2:
-                        amt = float(self.NUMBER_WORDS[m2.group(0).lower()])
-                        w = w[m2.end():].strip()
-        unit, name = self.find_unit_and_name_after_amount(w)
-        if not name:
+
+        # quick: if starts with percentage as descriptor (e.g., "93% lean ground turkey"),
+        pct_m = self.RE_PERCENT.match(w)
+        if pct_m:
             name = w
-        # strip trailing notes in parentheses
-        notes_m = re.search(r'\(([^)]+)\)\s*$', name)
+            notes = None
+            notes_m = re.search(r'\(([^)]+)\)\s*$', name)
+            if notes_m:
+                notes = notes_m.group(1)
+                name = re.sub(r'\s*\((?:[^()]*)\)\s*$', '', name)
+            return {
+                'original': orig,
+                'amount': None,
+                'unit': None,
+                'name': self.normalize_ingredient_name(name),
+                'notes': notes,
+                'confidence': 'med'
+            }
+
+        # ranges
+        range_m = self.RE_RANGE.search(w)
+        if range_m:
+            a_raw = range_m.group('a')
+            b_raw = range_m.group('b')
+            a_val = self.parse_fractional_number(a_raw)
+            b_val = self.parse_fractional_number(b_raw)
+            amt = {'min': a_val, 'max': b_val}
+            w_after = self.RE_RANGE.sub('', w, count=1).strip(',;: ')
+            unit, name = self.find_unit_and_name_after_amount(w_after)
+            if not name:
+                name = w_after
+            notes = None
+            notes_m = re.search(r'\(([^)]+)\)\s*$', name)
+            if notes_m:
+                notes = notes_m.group(1)
+                name = re.sub(r'\s*\((?:[^()]*)\)\s*$', '', name).strip()
+            return {
+                'original': orig, 'amount': amt, 'unit': unit, 'name': self.normalize_ingredient_name(name),
+                'notes': notes, 'confidence': 'med'
+            }
+
+        # glued number+unit
+        nun = self.RE_NUMUNIT.match(w)
+        if nun:
+            num_s = nun.group('num')
+            unit_tok = nun.group('unit').rstrip('.').lower()
+            amt_val = self.parse_fractional_number(num_s)
+            unit_mapped = self._map_unit_candidate(unit_tok)
+            remainder = w[nun.end():].strip()
+            remainder = re.sub(r'^[,:;\-\s]+', '', remainder)
+            notes = None
+            notes_m = re.search(r'\(([^)]+)\)\s*$', remainder)
+            if notes_m:
+                notes = notes_m.group(1)
+                remainder = re.sub(r'\s*\((?:[^()]*)\)\s*$', '', remainder).strip()
+            if unit_mapped:
+                return {
+                    'original': orig, 'amount': amt_val, 'unit': unit_mapped,
+                    'name': self.normalize_ingredient_name(remainder), 'notes': notes,
+                    'confidence': 'med'
+                }
+
+        # hyphenated number-unit
+        hyp = self.RE_HYPHEN_NUMUNIT.search(w)
+        if hyp:
+            num_s = hyp.group('num')
+            unit_tok = hyp.group('unit').rstrip('.').lower()
+            amt_val = self.parse_fractional_number(num_s)
+            unit_mapped = self._map_unit_candidate(unit_tok)
+            w2 = (w[:hyp.start()] + w[hyp.end():]).strip()
+            notes = None
+            notes_m = re.search(r'\(([^)]+)\)\s*$', w2)
+            if notes_m:
+                notes = notes_m.group(1)
+                w2 = re.sub(r'\s*\((?:[^()]*)\)\s*$', '', w2).strip()
+            return {
+                'original': orig, 'amount': amt_val, 'unit': unit_mapped,
+                'name': self.normalize_ingredient_name(w2), 'notes': notes, 'confidence': 'med'
+            }
+
+        # unicode fraction at start
+        u = self.RE_UNICODE_FRAC.match(w.lstrip())
+        if u:
+            amt_val = self.parse_fractional_number(u.group(0))
+            w_rem = w[u.end():].strip()
+            unit, name = self.find_unit_and_name_after_amount(w_rem)
+            if not name:
+                name = w_rem
+            notes = None
+            notes_m = re.search(r'\(([^)]+)\)\s*$', name)
+            if notes_m:
+                notes = notes_m.group(1)
+                name = re.sub(r'\s*\((?:[^()]*)\)\s*$', '', name).strip()
+            return {
+                'original': orig, 'amount': amt_val, 'unit': unit,
+                'name': self.normalize_ingredient_name(name), 'notes': notes, 'confidence': 'med'
+            }
+
+        # standard mixed/decimal
+        m = re.match(r'^\s*(?P<num>(?:\d+\s+\d+/\d+)|(?:\d+/\d+)|(?:\d+(?:[.,]\d+)?))\b', w)
+        if m:
+            amt_val = self.parse_fractional_number(m.group('num'))
+            w_rem = w[m.end():].strip()
+            unit, name = self.find_unit_and_name_after_amount(w_rem)
+            if not name:
+                name = w_rem
+            notes = None
+            notes_m = re.search(r'\(([^)]+)\)\s*$', name)
+            if notes_m:
+                notes = notes_m.group(1)
+                name = re.sub(r'\s*\((?:[^()]*)\)\s*$', '', name).strip()
+            return {
+                'original': orig, 'amount': amt_val, 'unit': unit,
+                'name': self.normalize_ingredient_name(name), 'notes': notes, 'confidence': 'med'
+            }
+
+        # word-number
+        m2 = self.RE_WORD_NUMBER.match(w)
+        if m2:
+            amt_val = float(self.NUMBER_WORDS[m2.group(0).lower()])
+            w_rem = w[m2.end():].strip()
+            unit, name = self.find_unit_and_name_after_amount(w_rem)
+            if not name:
+                name = w_rem
+            notes = None
+            notes_m = re.search(r'\(([^)]+)\)\s*$', name)
+            if notes_m:
+                notes = notes_m.group(1)
+                name = re.sub(r'\s*\((?:[^()]*)\)\s*$', '', name).strip()
+            return {
+                'original': orig, 'amount': amt_val, 'unit': unit,
+                'name': self.normalize_ingredient_name(name), 'notes': notes, 'confidence': 'med'
+            }
+
+        # fallback: treat as name
         notes = None
+        notes_m = re.search(r'\(([^)]+)\)\s*$', w)
+        name = w
         if notes_m:
             notes = notes_m.group(1)
             name = re.sub(r'\s*\((?:[^()]*)\)\s*$', '', name).strip()
-        name = self.normalize_ingredient_name(name)
-        return {'original': orig, 'amount': amt, 'unit': unit, 'name': name or None, 'notes': notes}
 
-    # ---------- New extraction: find Ingredients section by heading + collect lists ----------
-    def extract_ingredient_lines_by_heading(self, html, heading_regex=re.compile(r'\bingredient', re.I)):
+        return {
+            'original': orig, 'amount': None, 'unit': None,
+            'name': self.normalize_ingredient_name(name), 'notes': notes, 'confidence': 'low'
+        }
+
+
+    # ---------------------- extraction of ingredient lines ----------------------
+    def extract_ingredients_from_html(self, html: str) -> List[Tuple[Optional[str], str, str]]:
         """
-        1) find headings (h1..h6) or strong tags whose text matches heading_regex
-        2) gather subsequent sibling nodes until next heading of same-or-higher importance or until we hit "instructions"
-        3) extract text lines from lists (<ul>/<ol>), paragraphs, and short lines
-        4) preserve subsection titles (like 'Sauce', 'Curry Paste') if they appear as small headings or bold list items
-        Returns list of tuples: (subsection_name_or_None, ingredient_line_str)
+        Return list of triples: (subsection, raw_line, confidence_source)
+        FIXED VERSION:
+           - Detects true ingredient list container (WPRM, Tasty, MV-Create, SimpleRecipePro, WP standard)
+           - Stops as soon as the ingredient list ends
+           - Prevents scraping unrelated text blocks, ads, comments, SEO garbage
         """
         soup = BeautifulSoup(html, 'html.parser')
-        candidates = []
+        candidates: List[Tuple[Optional[str], str, str]] = []
 
-        # find heading nodes that likely mark ingredients
-        heading_nodes = []
-        for tag_name in ['h1','h2','h3','h4','h5','h6','strong','b']:
-            for tag in soup.find_all(tag_name):
-                text = tag.get_text(separator=' ', strip=True)
-                if text and heading_regex.search(text):
-                    heading_nodes.append(tag)
+        # -------------------------------
+        # 1) Strongest signal: JSON-LD
+        # -------------------------------
+        for script in soup.find_all('script', type='application/ld+json'):
+            try:
+                import json
+                data = json.loads(script.string or "{}")
+            except Exception:
+                continue
 
-        # fallback: look for text "Ingredients for" or other markers in page
-        if not heading_nodes:
-            for tag in soup.find_all(text=heading_regex):
-                if getattr(tag, 'parent', None):
-                    heading_nodes.append(tag.parent)
+            def walk(node):
+                if isinstance(node, dict):
+                    yield node
+                    for v in node.values():
+                        yield from walk(v)
+                elif isinstance(node, list):
+                    for x in node:
+                        yield from walk(x)
 
-        # For each heading found, gather siblings
-        for head in heading_nodes:
-            # walk next siblings until next big heading or instructions
-            subsection = None
-            for sib in head.next_siblings:
-                if getattr(sib, 'name', None) in ['h1','h2','h3','h4','h5','h6']:
-                    # stop when we hit next main heading
-                    break
-                # skip invisible/noise
-                if getattr(sib, 'name', None) in [None]:  # text node
+            for obj in walk(data):
+                if not isinstance(obj, dict):
                     continue
-                # If we encounter the instructions block, stop
-                txt = sib.get_text(separator=' ', strip=True).lower()
-                if 'instruction' in txt or 'method' in txt or 'direction' in txt or re.search(r'\bstep\b', txt):
-                    break
-                # if it's a list, extract <li>
-                if sib.name in ['ul','ol']:
-                    for li in sib.find_all('li', recursive=False):
-                        # check if li is a subsection title (single short bold text)
-                        li_text = li.get_text(separator=' ', strip=True)
-                        # if li contains nested list, treat the li's leading text as subsection header
-                        nested = li.find(['ul','ol'])
-                        if nested:
-                            # li_text upto nested tag is subsection name
-                            # Extract first text node before nested list
-                            head_text = ''
-                            for child in li.contents:
-                                if child == nested:
-                                    break
-                                if getattr(child, 'get_text', None):
-                                    head_text += ' ' + child.get_text(separator=' ', strip=True)
-                                else:
-                                    head_text += ' ' + str(child).strip()
-                            head_text = head_text.strip()
-                            if head_text:
-                                current_sub = head_text
-                            else:
-                                current_sub = None
-                            # add nested list items under current_sub
-                            for nli in nested.find_all('li', recursive=False):
-                                textline = nli.get_text(separator=' ', strip=True)
-                                if textline:
-                                    candidates.append((current_sub, textline))
-                        else:
-                            # regular li -> either an ingredient or a small label
-                            txt = li_text.strip()
-                            # filter UI-only lines
-                            if not self.looks_like_ui_label(txt):
-                                candidates.append((None, txt if txt else ''))
-                # sometimes ingredients are in paragraphs or divs
-                elif sib.name in ['p','div','section']:
-                    # find short lines inside
-                    text = sib.get_text(separator='\n', strip=True)
-                    for line in [l.strip() for l in text.splitlines() if l.strip()]:
-                        if len(line) < 200 and (re.search(r'\d', line) or self.contains_unit_word(line) or self.looks_like_ingredient_text(line)):
-                            if not self.looks_like_ui_label(line):
-                                candidates.append((None, line))
-        # dedupe-honor original order
-        seen = set()
-        cleaned = []
-        for sub, line in candidates:
-            key = (sub or '').strip() + '||' + line.strip()
-            if key.lower() not in seen:
-                seen.add(key.lower())
-                cleaned.append((sub, line.strip()))
-        return cleaned
+                if 'recipeIngredient' in obj:
+                    for line in obj['recipeIngredient']:
+                        if isinstance(line, str) and line.strip():
+                            candidates.append((None, line.strip(), 'json-ld'))
+                    return candidates  # JSON-LD is trusted → exit early
 
-    # small helpers for heuristics
-    def contains_unit_word(self, s):
-        return bool(re.search(r'\b(tsp|tbsp|cup|oz|ounce|g|gram|kg|ml|can|clove|slice|stick|package|lb|pound|cup)\b', s, re.I))
+        # -----------------------------------------------------
+        # 2) Locate the real ingredient container
+        # -----------------------------------------------------
+        ingredient_container_selectors = [
+            ".wprm-recipe-ingredients-container",
+            ".wprm-recipe-ingredients",
+            ".tasty-recipes-ingredients",
+            ".mv-create-ingredients",
+            ".simple-recipe-pro-ingredients",
+            ".recipe-ingredients",
+            "[itemprop='recipeIngredient']",
+            "[itemprop='ingredients']",
+            ".ingredients",
+            "ul.ingredients",
+        ]
 
-    def looks_like_ui_label(self, s):
-        s2 = s.strip().lower()
-        # filter out short non-ingredient UI labels
-        ui_labels = ['optional','substitute','note','servings','ingredients for','show full recipe']
-        if any(s2 == lbl or s2.startswith(lbl + ':') or s2.startswith(lbl + ' ') for lbl in ui_labels):
+        container = None
+        for sel in ingredient_container_selectors:
+            c = soup.select_one(sel)
+            if c:
+                container = c
+                break
+
+        if container:
+            # Extract ONLY li items inside this container
+            lines = []
+            for li in container.find_all("li"):
+                txt = li.get_text(" ", strip=True)
+                if txt:
+                    lines.append(txt)
+
+            # Hard-stop if empty container (avoid false positives)
+            if lines:
+                for ln in lines:
+                    candidates.append((None, ln, 'selector'))
+                return candidates
+
+        # -----------------------------------------------------
+        # 3) Secondary fallback: tight heuristic scan
+        # -----------------------------------------------------
+        # Only accept lines that appear in CLOSE PROXIMITY to other ingredient-like lines.
+        text_nodes = []
+        for el in soup.find_all(text=True):
+            line = el.strip()
+            if len(line) < 2:
+                continue
+            text_nodes.append(line)
+
+        def looks_like_ing(l):
+            if re.search(r'\b\d+\s*(cup|tsp|tbsp|oz|ounce|g|gram|kg|ml|lb|pound|can|clove|package)\b', l, re.I):
+                return True
+            if re.match(r'^\d', l):
+                return True
+            return False
+
+        # collect only sequences of 3+ ingredient-like lines
+        block = []
+        final_blocks = []
+
+        for line in text_nodes:
+            if looks_like_ing(line):
+                block.append(line)
+            else:
+                if len(block) >= 3:  # real ingredient list
+                    final_blocks.append(block)
+                block = []
+
+        if len(block) >= 3:
+            final_blocks.append(block)
+
+        if final_blocks:
+            # Take only the largest block (most likely real ingredients)
+            main = max(final_blocks, key=len)
+            for ln in main:
+                candidates.append((None, ln, 'heuristic'))
+            return candidates
+
+        # As a last fallback, return nothing instead of junk
+        return []
+
+    def _find_group_label(self, node) -> Optional[str]:
+        ancestor = node
+        for _ in range(4):
+            ancestor = ancestor.parent
+            if ancestor is None:
+                break
+            if ancestor.get('class'):
+                cls = ' '.join(ancestor.get('class'))
+                if 'group-name' in cls or 'ingredient-group' in cls or 'wprm-recipe-group-name' in cls:
+                    h = ancestor.find(['h1', 'h2', 'h3', 'h4', 'h5', 'strong', 'b'])
+                    if h:
+                        return h.get_text(separator=' ', strip=True)
+            h = ancestor.find(['h1', 'h2', 'h3', 'h4'])
+            if h and len(h.get_text(strip=True).split()) <= 6:
+                return h.get_text(separator=' ', strip=True)
+        return None
+
+    def _looks_like_ingredient_line(self, s: str) -> bool:
+        s2 = s.strip()
+        if not s2:
+            return False
+        # filter UI labels
+        low = s2.lower()
+        for lbl in self.UI_LABELS:
+            if low == lbl or low.startswith(lbl + ':') or low.startswith(lbl + ' '):
+                return False
+        if re.search(r'\d', s2):
             return True
-        # lines that are purely 'broccoli, carrots, red bell pepper' are okay — not UI label
-        # filter out things like 'image' or 'print recipe' etc
-        if re.match(r'^(image|print recipe|pin recipe|subscribe|download|nutrition)', s2):
+        if re.search(r'\b(tsp|tbsp|cup|oz|ounce|g|gram|kg|ml|can|clove|slice|stick|package|lb|pound|stalk|sprig|bag|box)\b', s2, re.I):
             return True
-        return False
-
-    def looks_like_ingredient_text(self,s):
-        # heuristic: ingredient lines often have digits, fractions, or unit words or are short (e.g., "spray coconut oil")
-        if re.search(r'\d', s): return True
-        if self.contains_unit_word(s): return True
-        # also allow short noun phrases (2-6 words) that look like items (e.g., "spray coconut oil", "fresh cilantro")
-        if 1 <= len(s.split()) <= 6:
-            # avoid UI-y single words like "Garnish"
-            if s.lower() in ['garnish', 'sauce', 'instructions', 'steps', 'notes']:
+        if 1 <= len(s2.split()) <= 7:
+            if s2.lower() in ['garnish', 'sauce', 'instructions', 'steps', 'notes']:
                 return False
             return True
         return False
 
-    # ---------- top-level: fetch page and parse ----------
-    def parse_recipe_url(self, url):
+    # ---------------------- top-level parse url ----------------------
+    def parse_recipe_url(self, url: str) -> List[Dict[str, Any]]:
         r = requests.get(url, timeout=15)
         r.raise_for_status()
         html = r.text
-        # First, try JSON-LD recipeIngredient (if site includes it) - high confidence
-        soup = BeautifulSoup(html, 'html.parser')
-        ingredients = []
-        # Try ld+json
-        for s in soup.find_all('script', type='application/ld+json'):
-            try:
-                import json
-                payload = json.loads(s.string or '{}')
-                def walk(obj):
-                    if not obj:
-                        return []
-                    res = []
-                    if isinstance(obj, list):
-                        for it in obj:
-                            res += walk(it)
-                    elif isinstance(obj, dict):
-                        if obj.get('@type') and 'recipe' in obj.get('@type').lower():
-                            for k in ('recipeIngredient','ingredients','ingredient'):
-                                if k in obj and obj[k]:
-                                    if isinstance(obj[k], list):
-                                        res += [(None, i) for i in obj[k]]
-                                    else:
-                                        res.append((None, obj[k]))
-                        for v in obj.values():
-                            res += walk(v)
-                    return res
-                ld_items = walk(payload)
-                if ld_items:
-                    ingredients += ld_items
-            except Exception:
-                continue
-        # If no JSON-LD or still empty, use heading-based extraction
-        if not ingredients:
-            extracted = self.extract_ingredient_lines_by_heading(html)
-            ingredients += extracted
 
-        # finally parse each ingredient line
+        raw_candidates = self.extract_ingredients_from_html(html)
+
         parsed = []
-        for subsection, line in ingredients:
-            # skip empty or obviously non-ingredient
-            if not line or self.looks_like_ui_label(line): continue
-            p = self.parse_ingredient_line(line)
-            if p:
-                p['subsection'] = subsection
-                parsed.append(p)
+        for subsection, raw_line, source in raw_candidates:
+            if not raw_line or raw_line.strip().lower() in self.UI_LABELS:
+                continue
+            parsed_item = self.parse_ingredient_line(raw_line)
+            if not parsed_item:
+                continue
+            parsed_item['subsection'] = subsection
+            if source == 'json-ld':
+                parsed_item['confidence'] = 'high'
+            elif source == 'selector' and parsed_item.get('confidence') == 'low':
+                parsed_item['confidence'] = 'med'
+            if not parsed_item.get('name'):
+                parsed_item['name'] = parsed_item.get('original')
+            parsed.append(parsed_item)
         return parsed
 
-# ---------- quick test ----------
+
+# ----------------------------- Example usage -----------------------------
 if __name__ == "__main__":
     rp = RecipeParser()
-    url = "https://fitmencook.com/recipes/panang-chicken-curry/"
+    url = "https://fitmencook.com/recipes/gochujang-ramen-recipe/"
     parsed = rp.parse_recipe_url(url)
     import pprint
-    pprint.pprint(parsed, width=140)
+    pprint.pprint(parsed, width=160)
