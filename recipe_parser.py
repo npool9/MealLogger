@@ -107,17 +107,17 @@ class RecipeParser:
         candidates = []
 
         # 1) STRONG: match class/id names
-        for key in self.STRONG_KEYS:
-            matches = soup.find_all(
-                lambda tag: (tag.has_attr("class") and any(key in c.lower() for c in tag["class"])) or
-                            (tag.has_attr("id") and key in tag["id"].lower())
-            )
-            for tag in matches:
-                candidates.append((tag, 100))  # strong score
+        # for key in self.STRONG_KEYS:
+        #     matches = soup.find_all(
+        #         lambda tag: (tag.has_attr("class") and any(key in c.lower() for c in tag["class"])) or
+        #                     (tag.has_attr("id") and key in tag["id"].lower())
+        #     )
+        #     for tag in matches:
+        #         candidates.append((tag, 100))  # strong score
 
         # 2) MEDIUM: any <section>, <div>, <ul> with lots of ingredient-like <li>
-        for tag in soup.find_all(["div", "section", "ul", "ol"]):
-            score = self.score_container(tag)
+        for tag in soup.find_all(["div", "section"]):
+            score = self.score_ingredient_container(tag)
             if score > 0:
                 candidates.append((tag, score))
 
@@ -133,58 +133,52 @@ class RecipeParser:
     # ------------------------------------------------------------
     # SCORE A POTENTIAL INGREDIENT CONTAINER
     # ------------------------------------------------------------
-    def score_container(self, tag):
-        text = tag.get_text(" ", strip=True).lower()
-        lis = tag.find_all("li")
-
-        if not lis:
-            return 0
-
-        score = 0
-
-        # keyword bonus
-        for key in self.STRONG_KEYS:
-            if key in text:
-                score += 20
-
-        # per <li> score
-        for li in lis:
-            li_text = li.get_text(" ", strip=True).lower()
-
-            if self.AMOUNT_PATTERN.search(li_text):
-                score += 5
-            if self.UNIT_PATTERN.search(li_text):
-                score += 5
-
-            # food-ish words give small boost
-            if any(word in li_text for word in ["chicken", "onion", "salt", "garlic", "oil"]):
-                score += 1
-
-        return score
-
-    # ------------------------------------------------------------
-    # PARSE INGREDIENTS ONLY FROM SELECTED CONTAINER
-    # ------------------------------------------------------------
-    def parse_ingredients(self):
-        container = self.find_ingredient_container()
-        if not container:
-            return []
-
-        ingredients = []
-        current_section = None
-
-        for node in container.descendants:
-            if node.name in ["h2", "h3", "h4"]:
-                current_section = node.get_text(strip=True)
-
-            if node.name == "li":
-                text = node.get_text(" ", strip=True)
-                ingredients.append({
-                    "text": text,
-                    "section": current_section
-                })
-
-        return ingredients
+    def score_ingredient_container(self, node):
+        """
+        Determine whether a DOM node is a good ingredient container.
+        Higher scores = more likely to be the correct block.
+        """
+        # 1) Count descendant text lines
+        all_text = node.get_text("\n", strip=True)
+        text_lines = [l.strip() for l in all_text.split("\n") if l.strip()]
+        # 2) Find LI items using controlled recursion
+        li_nodes = self.find_li_with_depth(node, max_depth=2)
+        pos = 0
+        neg = 0
+        # + Positive scoring
+        ingredient_like_count = 0
+        bad_li = 0
+        for li in li_nodes:
+            line = li.get_text(" ", strip=True)
+            if self.looks_like_ingredient_line(line):
+                ingredient_like_count += 1
+                pos += 3
+            else:
+                bad_li += 1
+                neg += 1
+        # Penalize LI ratio
+        if ingredient_like_count == 0:
+            neg += 10  # avoid containers with long lists of junk
+        # 3) Heading bonus
+        heading_text = ""
+        if node.find(["h1", "h2", "h3", "h4", "h5"], string=re.compile(r"ingredient", re.I)):
+            pos += 2
+        # 4) Penalty for overall container size
+        descendants = len(list(node.descendants))
+        neg += descendants * 0.02  # dynamic scaling
+        # 5) Penalty for junk keywords in large text
+        junk_hits = sum(self.contains_junk_keywords(l) for l in text_lines)
+        neg += junk_hits * 3
+        # 6) Penalty for very long containers
+        if len(text_lines) > 60:
+            neg += 10
+        elif len(text_lines) > 120:
+            neg += 30
+        # 7) Very large number of LI elements (likely nav or sidebar)
+        if len(li_nodes) > 25:
+            neg += 8
+        # Final score
+        return pos - neg
 
     # ---------------------- low-level number parsing ----------------------
     def parse_fractional_number(self, s: Optional[str]) -> Optional[float]:
@@ -443,7 +437,11 @@ class RecipeParser:
         NOW IMPROVED TO STOP AT END OF INGREDIENT LIST.
         """
         soup = BeautifulSoup(html, 'html.parser')
-        soup = soup.find("div", class_="fmc_ingredients")
+        soup = self.find_ingredient_container(soup)
+        # print("Found ingredient container:", soup["class"])
+        if not soup:
+            soup = soup.find("div", class_="fmc_ingredients")
+        # soup = soup.find("div", class_="fmc_ingredients")
         candidates: List[Tuple[Optional[str], str, str]] = []
 
         # 1) JSON-LD recipeIngredient - HIGH confidence
@@ -628,6 +626,74 @@ class RecipeParser:
             parsed.append(parsed_item)
         return parsed
 
+    def find_li_with_depth(self, node, max_depth=2):
+        """Find <li> elements up to a limited depth inside node."""
+        results = []
+        def walk(n, depth):
+            if depth > max_depth:
+                return
+            # If n is a list container, capture its direct <li> children
+            if n.name in ("ul", "ol"):
+                for li in n.find_all("li", recursive=False):
+                    results.append(li)
+            # Recurse into children (both tag and non-tag children)
+            for child in getattr(n, "contents", []):
+                if getattr(child, "name", None):  # Is a tag
+                    walk(child, depth + 1)
+        walk(node, depth=0)
+        return results
+
+    def looks_like_ingredient_line(self, text: str):
+        if not text: return False
+        t = text.lower()
+        if re.search(r'\d', t): return True
+        if self.contains_unit_word(t): return True
+        if any(fr in t for fr in self.UNICODE_FRACTIONS): return True
+        # 2–6 word ingredient-like noun phrases
+        words = t.split()
+        if 2 <= len(words) <= 7:
+            if t not in ("subscribe", "nutrition", "instructions", "directions"):
+                return True
+        return False
+
+    def contains_junk_keywords(self, text):
+        t = text.lower()
+        junk = [
+            "print recipe", "pin recipe", "share", "facebook",
+            "instagram", "copyright", "subscribe", "newsletter",
+            "related recipes", "shop this post", "join", "login",
+            "author", "comment", "review", "rating"
+        ]
+        return any(j in t for j in junk)
+
+    # small helpers for heuristics
+    def contains_unit_word(self, s):
+        return bool(
+            re.search(r'\b(tsp|tbsp|cup|oz|ounce|g|gram|kg|ml|can|clove|slice|stick|package|lb|pound|cup)\b', s, re.I))
+
+    def looks_like_ui_label(self, s):
+        s2 = s.strip().lower()
+        # filter out short non-ingredient UI labels
+        ui_labels = ['optional', 'substitute', 'note', 'servings', 'ingredients for', 'show full recipe']
+        if any(s2 == lbl or s2.startswith(lbl + ':') or s2.startswith(lbl + ' ') for lbl in ui_labels):
+            return True
+        # lines that are purely 'broccoli, carrots, red bell pepper' are okay — not UI label
+        # filter out things like 'image' or 'print recipe' etc
+        if re.match(r'^(image|print recipe|pin recipe|subscribe|download|nutrition)', s2):
+            return True
+        return False
+
+    def looks_like_ingredient_text(self, s):
+        # heuristic: ingredient lines often have digits, fractions, or unit words or are short (e.g., "spray coconut oil")
+        if re.search(r'\d', s): return True
+        if self.contains_unit_word(s): return True
+        # also allow short noun phrases (2-6 words) that look like items (e.g., "spray coconut oil", "fresh cilantro")
+        if 1 <= len(s.split()) <= 6:
+            # avoid UI-y single words like "Garnish"
+            if s.lower() in ['garnish', 'sauce', 'instructions', 'steps', 'notes']:
+                return False
+            return True
+        return False
 
 # ----------------------------- Example usage -----------------------------
 if __name__ == "__main__":
