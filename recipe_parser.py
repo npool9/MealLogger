@@ -85,10 +85,106 @@ class RecipeParser:
         self.RE_HYPHEN_NUMUNIT = re.compile(r'(?P<num>\d+(?:[.,]\d+)?)-(?P<unit>[A-Za-z%./]+)\b')
 
         # heuristics: UI labels to filter
-        self.UI_LABELS = set([
-            'optional', 'substitute', 'note', 'servings', 'ingredients for',
-            'show full recipe', 'print recipe', 'nutrition', 'calories'
-        ])
+        self.UI_LABELS = {'optional', 'substitute', 'note', 'servings', 'ingredients for', 'show full recipe',
+                          'print recipe', 'nutrition', 'calories'}
+
+        self.UNIT_PATTERN = re.compile(
+            r"\b(cup|cups|tbsp|tablespoon|tsp|teaspoon|pound|lb|oz|gram|g|kg|ml|l|liters?)\b",
+            re.IGNORECASE
+        )
+        self.AMOUNT_PATTERN = re.compile(r"\b(\d+\s*\d*\/?\d*)\b")
+
+        self.STRONG_KEYS = [
+            "ingredient", "ingredients", "fmc_ingredients",
+            "recipe-ingredients", "wprm-recipe-ingredients",
+            "ingredients-section"
+        ]
+
+    # ------------------------------------------------------------
+    # FIND INGREDIENT CONTAINER
+    # ------------------------------------------------------------
+    def find_ingredient_container(self, soup):
+        candidates = []
+
+        # 1) STRONG: match class/id names
+        for key in self.STRONG_KEYS:
+            matches = soup.find_all(
+                lambda tag: (tag.has_attr("class") and any(key in c.lower() for c in tag["class"])) or
+                            (tag.has_attr("id") and key in tag["id"].lower())
+            )
+            for tag in matches:
+                candidates.append((tag, 100))  # strong score
+
+        # 2) MEDIUM: any <section>, <div>, <ul> with lots of ingredient-like <li>
+        for tag in soup.find_all(["div", "section", "ul", "ol"]):
+            score = self.score_container(tag)
+            if score > 0:
+                candidates.append((tag, score))
+
+        if not candidates:
+            return None
+
+        # pick the highest-scoring container
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        best, score = candidates[0]
+
+        return best
+
+    # ------------------------------------------------------------
+    # SCORE A POTENTIAL INGREDIENT CONTAINER
+    # ------------------------------------------------------------
+    def score_container(self, tag):
+        text = tag.get_text(" ", strip=True).lower()
+        lis = tag.find_all("li")
+
+        if not lis:
+            return 0
+
+        score = 0
+
+        # keyword bonus
+        for key in self.STRONG_KEYS:
+            if key in text:
+                score += 20
+
+        # per <li> score
+        for li in lis:
+            li_text = li.get_text(" ", strip=True).lower()
+
+            if self.AMOUNT_PATTERN.search(li_text):
+                score += 5
+            if self.UNIT_PATTERN.search(li_text):
+                score += 5
+
+            # food-ish words give small boost
+            if any(word in li_text for word in ["chicken", "onion", "salt", "garlic", "oil"]):
+                score += 1
+
+        return score
+
+    # ------------------------------------------------------------
+    # PARSE INGREDIENTS ONLY FROM SELECTED CONTAINER
+    # ------------------------------------------------------------
+    def parse_ingredients(self):
+        container = self.find_ingredient_container()
+        if not container:
+            return []
+
+        ingredients = []
+        current_section = None
+
+        for node in container.descendants:
+            if node.name in ["h2", "h3", "h4"]:
+                current_section = node.get_text(strip=True)
+
+            if node.name == "li":
+                text = node.get_text(" ", strip=True)
+                ingredients.append({
+                    "text": text,
+                    "section": current_section
+                })
+
+        return ingredients
 
     # ---------------------- low-level number parsing ----------------------
     def parse_fractional_number(self, s: Optional[str]) -> Optional[float]:
