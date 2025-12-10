@@ -1,10 +1,3 @@
-# perfected_recipe_parser.py
-# Robust RecipeParser: JSON-LD, WPRM, glued units (2oz/10-oz), percentages, hyphenated amounts,
-# nested subsections, notes, and confidence levels.
-#
-# Requires: requests, beautifulsoup4
-# pip install requests beautifulsoup4
-
 import re
 from fractions import Fraction
 from html import unescape
