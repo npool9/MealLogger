@@ -344,121 +344,132 @@ class RecipeParser:
     def extract_ingredients_from_html(self, html: str) -> List[Tuple[Optional[str], str, str]]:
         """
         Return list of triples: (subsection, raw_line, confidence_source)
-        FIXED VERSION:
-           - Detects true ingredient list container (WPRM, Tasty, MV-Create, SimpleRecipePro, WP standard)
-           - Stops as soon as the ingredient list ends
-           - Prevents scraping unrelated text blocks, ads, comments, SEO garbage
+        NOW IMPROVED TO STOP AT END OF INGREDIENT LIST.
         """
         soup = BeautifulSoup(html, 'html.parser')
+        soup = soup.find("div", class_="fmc_ingredients")
         candidates: List[Tuple[Optional[str], str, str]] = []
 
-        # -------------------------------
-        # 1) Strongest signal: JSON-LD
-        # -------------------------------
+        # 1) JSON-LD recipeIngredient - HIGH confidence
         for script in soup.find_all('script', type='application/ld+json'):
             try:
                 import json
-                data = json.loads(script.string or "{}")
+                payload = json.loads(script.string or '{}')
             except Exception:
                 continue
 
-            def walk(node):
-                if isinstance(node, dict):
-                    yield node
-                    for v in node.values():
+            def walk(obj):
+                if isinstance(obj, list):
+                    for it in obj:
+                        yield from walk(it)
+                elif isinstance(obj, dict):
+                    yield obj
+                    for v in obj.values():
                         yield from walk(v)
-                elif isinstance(node, list):
-                    for x in node:
-                        yield from walk(x)
+                else:
+                    return
 
-            for obj in walk(data):
-                if not isinstance(obj, dict):
-                    continue
-                if 'recipeIngredient' in obj:
-                    for line in obj['recipeIngredient']:
-                        if isinstance(line, str) and line.strip():
-                            candidates.append((None, line.strip(), 'json-ld'))
-                    return candidates  # JSON-LD is trusted → exit early
+            for node in walk(payload):
+                if isinstance(node, dict) and 'recipe' in str(node.get('@type', '')).lower():
+                    instr = node.get('recipeIngredient') or node.get('ingredients') or node.get('ingredient')
+                    if instr:
+                        if isinstance(instr, list):
+                            for line in instr:
+                                if isinstance(line, str) and line.strip():
+                                    candidates.append((None, line.strip(), 'json-ld'))
+                        elif isinstance(instr, str):
+                            for l in instr.splitlines():
+                                if l.strip():
+                                    candidates.append((None, l.strip(), 'json-ld'))
 
-        # -----------------------------------------------------
-        # 2) Locate the real ingredient container
-        # -----------------------------------------------------
-        ingredient_container_selectors = [
-            ".wprm-recipe-ingredients-container",
-            ".wprm-recipe-ingredients",
-            ".tasty-recipes-ingredients",
-            ".mv-create-ingredients",
-            ".simple-recipe-pro-ingredients",
-            ".recipe-ingredients",
-            "[itemprop='recipeIngredient']",
-            "[itemprop='ingredients']",
-            ".ingredients",
-            "ul.ingredients",
+        # 2) WPRM & common selectors (high/med confidence)
+        selectors = [
+            ".wprm-recipe-ingredient", ".wprm-recipe-ingredient-group",  # WPRM
+            ".wprm-recipe-ingredients li",
+            ".ingredients-list", ".ingredients", ".recipe-ingredients", ".ingredient-list",
+            "[itemprop*=ingredient]", ".ingredient", ".ingredients li", "ul.ingredients", "ol.ingredients"
+        ]
+        for sel in selectors:
+            for node in soup.select(sel):
+                # If this node is an li, capture text
+                if node.name == 'li':
+                    text = node.get_text(separator=' ', strip=True)
+                    if text:
+                        parent_group = self._find_group_label(node)
+                        candidates.append((parent_group, text, 'selector'))
+                else:
+                    lis = node.find_all('li')
+                    if lis:
+                        parent_group = None
+                        head = node.find(['h1', 'h2', 'h3', 'h4', 'h5', 'strong', 'b'])
+                        if head:
+                            parent_group = head.get_text(separator=' ', strip=True)
+                        for li in lis:
+                            text = li.get_text(separator=' ', strip=True)
+                            if text:
+                                candidates.append((parent_group, text, 'selector'))
+
+        # ---------- NEW: Determine recipe container ----------
+        recipe_containers = [
+            ".wprm-recipe-container", ".tasty-recipes", ".mv-create-card",
+            ".simple-recipe-pro", ".recipe-card", "#recipe-card",
+            ".h-recipe", ".easyrecipe"
         ]
 
         container = None
-        for sel in ingredient_container_selectors:
+        for sel in recipe_containers:
             c = soup.select_one(sel)
             if c:
                 container = c
                 break
 
+        # headings that signal END of ingredient list
+        stop_headings = re.compile(
+            r'^(instructions?|steps?|directions?|method|preparation|notes?|nutrition)$',
+            re.I
+        )
+
+        # ---------- 3) Heuristic fallback inside main container ----------
         if container:
-            # Extract ONLY li items inside this container
-            lines = []
-            for li in container.find_all("li"):
-                txt = li.get_text(" ", strip=True)
-                if txt:
-                    lines.append(txt)
+            for node in container.find_all(text=True):
+                line = node.strip()
+                if not line:
+                    continue
 
-            # Hard-stop if empty container (avoid false positives)
-            if lines:
-                for ln in lines:
-                    candidates.append((None, ln, 'selector'))
-                return candidates
+                # stop when we reach instructions
+                if stop_headings.match(line.lower()):
+                    break
 
-        # -----------------------------------------------------
-        # 3) Secondary fallback: tight heuristic scan
-        # -----------------------------------------------------
-        # Only accept lines that appear in CLOSE PROXIMITY to other ingredient-like lines.
-        text_nodes = []
-        for el in soup.find_all(text=True):
-            line = el.strip()
-            if len(line) < 2:
-                continue
-            text_nodes.append(line)
+                if self._looks_like_ingredient_line(line):
+                    candidates.append((None, line, 'heuristic'))
+        else:
+            # ---------- 4) Fallback: visible text WITH boundary detection ----------
+            visible_text = soup.get_text(separator='\n', strip=True)
 
-        def looks_like_ing(l):
-            if re.search(r'\b\d+\s*(cup|tsp|tbsp|oz|ounce|g|gram|kg|ml|lb|pound|can|clove|package)\b', l, re.I):
-                return True
-            if re.match(r'^\d', l):
-                return True
-            return False
+            found_ingredients = False
+            for line in [l.strip() for l in visible_text.splitlines() if l.strip()]:
 
-        # collect only sequences of 3+ ingredient-like lines
-        block = []
-        final_blocks = []
+                # detect start
+                if not found_ingredients and self._looks_like_ingredient_line(line):
+                    found_ingredients = True
 
-        for line in text_nodes:
-            if looks_like_ing(line):
-                block.append(line)
-            else:
-                if len(block) >= 3:  # real ingredient list
-                    final_blocks.append(block)
-                block = []
+                # detect end
+                if found_ingredients and stop_headings.match(line.lower()):
+                    break
 
-        if len(block) >= 3:
-            final_blocks.append(block)
+                if found_ingredients and self._looks_like_ingredient_line(line):
+                    candidates.append((None, line, 'heuristic'))
 
-        if final_blocks:
-            # Take only the largest block (most likely real ingredients)
-            main = max(final_blocks, key=len)
-            for ln in main:
-                candidates.append((None, ln, 'heuristic'))
-            return candidates
+        # ---------- Deduplicate ----------
+        seen = set()
+        out = []
+        for sub, line, source in candidates:
+            key = ((sub or '') + '||' + line).lower()
+            if key not in seen:
+                seen.add(key)
+                out.append((sub, line, source))
+        return out
 
-        # As a last fallback, return nothing instead of junk
-        return []
 
     def _find_group_label(self, node) -> Optional[str]:
         ancestor = node
