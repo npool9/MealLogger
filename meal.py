@@ -5,188 +5,91 @@ class Meal(object):
     A meal object
     """
 
-    def __init__(self, meal_key=None, meal_name=None, calories=None, carbs=None, fat=None, protein=None,
-        sugar=None, fiber=None, sodium=None, website_name=None, recipe_url=None):
+    def __init__(self, id=None, name=None, description=None, servings=None, serving_size=None, serving_unit=None,
+                 recipe_url=None, created_at=None):
         """
         Initialize the meal object
         """
-        self._meal_key = meal_key
-        self._meal_name = meal_name
-        self._calories = calories
-        self._carbs = carbs
-        self._fat = fat
-        self._protein = protein
-        self._sugar = sugar
-        self._fiber = fiber
-        self._sodium = sodium
-        self._website_name = website_name
+        self._id = id
+        self._name = name
+        self._description = description
+        self._servings = servings
+        self._serving_size = serving_size
+        self._serving_unit = serving_unit
         self._recipe_url = recipe_url
+        self._created_at = created_at
 
     def describe(self):
         """
         Describe the meal object by printing out the details to the console
         """
-        print("Meal Key:", self._meal_key)
-        print("Meal Name:", self._meal_name)
-        print("Calories:", self._calories)
-        print("Carbs:", self._carbs)
-        print("Fat:", self._fat)
-        print("Protein:", self._protein)
-        print("Sugar:", self._sugar)
-        print("Fiber:", self._fiber)
-        print("Sodium:", self._sodium)
-        print("Website Name:", self._website_name)
+        print("Meal ID:", self._id)
+        print("Meal Name:", self._name)
+        print("Description:", self._description)
+        print("Servings:", self._servings)
+        print("Serving Size:", self._serving_size)
+        print("Serving Unit:", self._serving_unit)
         print("Recipe URL:", self._recipe_url)
+        print("Created At:", self._created_at)
 
     @property
-    def meal_key(self):
+    def id(self):
         """
         Get the meal key value
         """
-        return self._meal_key
+        return self._id
 
-    @meal_key.setter
-    def meal_key(self, meal_key):
+    @id.setter
+    def id(self, id):
         """
         Set the meal key
         :parameter meal_key: the new meal key
         """
-        self._meal_key = meal_key
+        self._id = id
 
     @property
-    def meal_name(self):
+    def name(self):
         """
         Get the meal name value
         """
-        return self._meal_name
+        return self._name
 
-    @meal_name.setter
-    def meal_name(self, meal_name):
+    @name.setter
+    def name(self, name):
         """
         Set the meal name
-        :parameter meal_name: the new meal naame
+        :parameter name: the new meal name
         """
-        self._meal_name = meal_name
+        self._name = name
 
     @property
-    def calories(self):
+    def description(self):
         """
-        Get the calories value
+        Get the description
         """
-        return self._calories
+        return self._description
 
-    @calories.setter
-    def calories(self, calories):
-        """
-        Set the calories
-        :parameter calories: the new calorie measurement
-        """
-        self._calories = calories
-
-    @property
-    def carbs(self):
-        """
-        Get the carbs value
-        """
-        return self._carbs
-
-    @calories.setter
-    def calories(self, carbs):
-        """
-        Set the carbs
-        :parameter carbs: the new carbs measurement
-        """
-        self._carbs = carbs
-
-    @property
-    def fat(self):
-        """
-        Get the fat value
-        """
-        return self._fat
-
-    @fat.setter
-    def fat(self, fat):
-        """
-        Set the fat
-        :parameter fat: the new fat measurement
-        """
-        self._fat = fat
-
-    @property
-    def protein(self):
-        """
-        Get the protein value
-        """
-        return self._protein
-
-    @protein.setter
-    def protein(self, protein):
-        """
-        Set the protein
-        :parameter protein: the new protein measurement
-        """
-        self._protein = protein
-
-    @property
-    def sugar(self):
-        """
-        Get the sugar value
-        """
-        return self._sugar
-
-    @sugar.setter
-    def sugar(self, sugar):
-        """
-        Set the sugar
-        :parameter sugar: the new sugar measurement
-        """
-        self._sugar = sugar
-
-    @property
-    def fiber(self):
-        """
-        Get the fiber value
-        """
-        return self._fiber
-
-    @fiber.setter
-    def fiber(self, fiber):
-        """
-        Set the fiber
-        :parameter fiber: the new fiber measurement
-        """
-        self._fiber = fiber
-
-    @property
-    def sodium(self):
-        """
-        Get the sodium value
-        """
-        return self._sodium
-
-    @sodium.setter
-    def sodium(self, sodium):
-        """
-        Set the sodium
-        :parameter sodium: the new sodium measurement
-        """
-        self._sodium = sodium
-
-    @property
-    def website_name(self):
-        """
-        Get the website name value
-        """
-        return self._website_name
-
-    @website_name.setter
-    def website_name(self, website_name):
+    @description.setter
+    def description(self, description):
         """
         Set the website name
         :parameter website_name: the new website name
         """
-        self._website_name = website_name
+        self._description = description
+
+    @property
+    def servings(self):
+        """
+        Get the servings value
+        """
+        return self._servings
+
+    @servings.setter
+    def servings(self, servings):
+        """
+        Set the servings value
+        """
+        self._servings = servings
 
     @property
     def recipe_url(self):
@@ -199,6 +102,49 @@ class Meal(object):
     def recipe_url(self, recipe_url):
         """
         Set the recipe url
-        :parameter website_name: the new recipe url
+        :parameter recipe_url: the new recipe url
         """
         self._recipe_url = recipe_url
+
+    @property
+    def serving_size(self):
+        """
+        Get the serving size
+        """
+        return self._serving_size
+
+    @serving_size.setter
+    def serving_size(self, serving_size):
+        """
+        Set the serving size
+        """
+        self._serving_size = serving_size
+
+    @property
+    def serving_unit(self):
+        """
+        Get the serving unit
+        """
+        return self._serving_unit
+
+    @serving_unit.setter
+    def serving_unit(self, serving_unit):
+        """
+        Set the serving unit
+        """
+        self._serving_unit = serving_unit
+
+    @property
+    def created_at(self):
+        """
+        Get the created_at value
+        """
+        return self._created_at
+
+    @created_at.setter
+    def created_at(self, created_at):
+        """
+        Set the created_at
+        :parameter created_at: the new created_at
+        """
+        self._created_at = created_at

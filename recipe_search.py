@@ -14,11 +14,11 @@ class RecipeSearch:
         Define base urls
         """
         self.meal = meal
-        self.meal_name = self.meal._meal_name
+        self.meal_name = self.meal._name
         self.base_url = None
         self.search_url = None
         # Webscraping Utilities
-        self._driver = self.get_driver(headless=True)
+        # self._driver = self.get_driver(headless=False)
 
     def get_driver(self, headless=True):
         options = Options()
@@ -43,7 +43,7 @@ class RecipeSearch:
         """
         pass
 
-    def get_ingredients(self):
+    def get_ingredients(self, meal):
         """
         Get a list of ingredients (strings) for the meal provided
         :return: list of ingredients (list of str)

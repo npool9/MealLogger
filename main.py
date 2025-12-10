@@ -26,8 +26,9 @@ def run():
         # Get list of ingredients from a website
         print("Meal does not exist")
         print("Searching for meal...")
-        meal.meal_name = meal_name
+        meal._name = meal_name
         ingredient_list = meal_logger._model.find_meal(meal)
+
         print("Found ingredients list")
         # Send the parsed ingredients list to the view
         ingredient_list = meal_logger._view.finalize_ingredients(ingredient_list)

@@ -66,4 +66,3 @@ class DatabaseUtility:
         conn.cursor.close()
         conn.close()
         print("Connection to database has been closed.")
-

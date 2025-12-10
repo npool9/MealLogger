@@ -53,7 +53,7 @@ class Model:
         meal = Meal(*row)
         return meal, exists
 
-    def find_meal(self, meal):
+    def find_meal(self, meal, ):
         """
         Find the provided meal on a recipe website
         :param meal: the meal object that's not already in database (str)
@@ -62,7 +62,13 @@ class Model:
         # TODO: Ask user for the website to search
         print("Supported Websites:", self.supported_websites)
         search = FitMenCook(meal)
+        print("Getting ingredients list...")
         ingredient_list = search.get_ingredients(meal)
+        print("Getting recipe description...")
+        meal.description = search.get_recipe_steps(meal)
+        print("Getting recipe servings...")
+        meal.servings = search.get_recipe_servings(meal)
+        meal.serving_size, meal.serving_unit = search.get_serving_size_and_unit(meal)
         return ingredient_list
 
     def build_meal(self, meal, ingredients):
