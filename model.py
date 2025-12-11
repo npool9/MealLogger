@@ -1,4 +1,5 @@
 from meal import Meal
+from meal_repository import MealRepository
 from database_utility import DatabaseUtility
 from fitmencook_search import FitMenCook
 from ingredient_parser import IngredientParser
@@ -53,7 +54,7 @@ class Model:
         meal = Meal(*row)
         return meal, exists
 
-    def find_meal(self, meal, ):
+    def find_meal(self, meal):
         """
         Find the provided meal on a recipe website
         :param meal: the meal object that's not already in database (str)
@@ -70,6 +71,13 @@ class Model:
         meal.servings = search.get_recipe_servings(meal)
         meal.serving_size, meal.serving_unit = search.get_serving_size_and_unit(meal)
         return ingredient_list
+
+    def insert_meal(self, meal: Meal):
+        """
+        Insert the meal into the database
+        :param meal: the completed meal (without id and created_at)
+        """
+        MealRepository(self._db_util).insert(meal)
 
     def build_meal(self, meal, ingredients):
         """

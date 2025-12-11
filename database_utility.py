@@ -14,6 +14,7 @@ class DatabaseUtility:
         """
         self._config_section = "credentials"
         self._database_ini = os.path.join(os.path.dirname(__file__), "database", "database.ini")
+        self.conn, self.cur = None, None
 
     def get_credentials(self):
         """
@@ -38,25 +39,23 @@ class DatabaseUtility:
         :param credentials: a dictionary of connection parameters to the db
         :return: the (open) database connection and cursor objects
         """
-        conn = None
-        cur = None
         try:
             print('Connecting to the PostgreSQL database...')
             password = input(f"Please enter your database password for {credentials['user']}:")
-            conn = psycopg2.connect(
+            self.conn = psycopg2.connect(
                 host=credentials["host"],
                 user=credentials["user"],
                 password=password,
                 dbname=credentials["meal_db"],
                 port=credentials["port"]  # Connect to a default database to create others
             )
-            cur = conn.cursor()
-            cur.execute('SELECT version()')
-            db_version = cur.fetchone()
+            self.cur = self.conn.cursor()
+            self.cur.execute('SELECT version()')
+            db_version = self.cur.fetchone()
             print("Successfully connected to database")
         except (Exception, psycopg2.DatabaseError) as error:
             raise Exception(error)
-        return conn, cur
+        return self.conn, self.cur
 
     def disconnect(self, conn):
         """
@@ -66,3 +65,29 @@ class DatabaseUtility:
         conn.cursor.close()
         conn.close()
         print("Connection to database has been closed.")
+
+    def execute_statement(self, statement: str):
+        """
+        Execute an update, insert, or delete statement
+        :param statement: the statement to execute
+        """
+        self.cur.execute(statement)
+        row_id = self.cur.fetchone()[0]
+        self.conn.commit()
+        return row_id
+
+
+    def get_row_id(self, table_name: str, column_name: str, value: str, id_col="id"):
+        """
+        Get the row id that follows the condition specified by column name and value
+        :param table_name: the table to query
+        :param column_name: the column name to use in the where clause
+        :param value: the value of the column name for the where clause
+        :param id_col: the name of the id column
+        """
+        query = f"select * from {table_name} where {column_name} = \'{value}\';"
+        print(query)
+        self.conn.cursor().execute(query)
+        self.conn.commit()
+        res = self.conn.cursor().fetchone()
+        return res[id_col]

@@ -7,6 +7,7 @@ from typing import List, Dict, Optional, Tuple, Any
 
 
 class RecipeParser:
+
     def __init__(self):
         # canonical units and many aliases (extendable)
         self.UNIT_ALIASES = {
