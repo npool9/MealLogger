@@ -1,4 +1,6 @@
 from meal import Meal
+from ingredient import Ingredient
+from usda_service import USDAService
 from meal_repository import MealRepository
 from database_utility import DatabaseUtility
 from fitmencook_search import FitMenCook
@@ -79,17 +81,26 @@ class Model:
         """
         MealRepository(self._db_util).insert(meal)
 
+    def process_ingredients(self, ingredient_list: list):
+        """
+        Loop through the ingredients in the list, create ingredient objects, insert them into the database
+        :param ingredient_list: the list of ingredients
+        """
+        for ingredient in ingredient_list:  # create ingredient object
+            # lookup nutrition information about ingredient
+            pass
+
     def build_meal(self, meal, ingredients):
         """
         Build the full meal object from the list of ingredients provided and
         the meal object template. Query the Nutritionix API for nutrition
         information
-        :param meal: the empty Meal object (except for meal_name)
-        :param ingredients: list of ingredients (list of str) that needs parsed
-            for ingredient name and measurements
-        :return: complete Meal object
+        :param meal: the complete meal object
+        :param ingredients: list of parsed ingredients (list of dicts)
+        :return: the completed meal and ingredient objects
         """
-        for full_ingredient in ingredients:
-            # self._ingredient_parser.parse(full_ingredient)
-            print(full_ingredient)
+        usda = USDAService()
+        for ingredient in ingredients:
+            food_info = usda.search_foundation_food(ingredient["name"])
+            print(ingredient, "---", food_info)
         meal.describe()

@@ -25,6 +25,7 @@ class Flyway:
                 dbname=self.credentials["init_db"],
                 port=self.credentials["port"]  # Connect to a default database to create others
             )
+            self.cur = self.conn.cursor()
         except psycopg2.Error as e:
             raise Exception(f"Error creating database: {e}")
 
@@ -34,12 +35,12 @@ class Flyway:
         :param db_name: name of new database
         """
         self.conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-        self.conn.cursor().execute("SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{}'".format(db_name))
+        self.cur.execute("SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{}'".format(db_name))
         try:
-            exists = self.conn.cursor().fetchone()
+            exists = self.cur.fetchone()
         except psycopg2.ProgrammingError:
             try:
-                self.conn.cursor().execute("CREATE DATABASE \"{}\"".format(db_name))
+                self.cur.execute("CREATE DATABASE \"{}\"".format(db_name))
                 self.conn.commit()
             except psycopg2.errors.DuplicateDatabase:
                 print(f"{db_name} already exists.")
@@ -60,7 +61,7 @@ class Flyway:
         flyway_script_name = f"create_table_{table_name}.sql"
         create_table_statement = open(os.path.join(self.flyway_path, flyway_script_name), 'r').read()
         try:
-            self.conn.cursor().execute(create_table_statement)
+            self.cur.execute(create_table_statement)
             self.conn.commit()
         except psycopg2.errors.DuplicateTable:
             print(f"Relation \"{table_name}\" was already created")

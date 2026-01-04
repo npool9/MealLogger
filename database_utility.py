@@ -57,13 +57,12 @@ class DatabaseUtility:
             raise Exception(error)
         return self.conn, self.cur
 
-    def disconnect(self, conn):
+    def disconnect(self):
         """
         Take an existing, open database connection and close it
-        :param conn: a psycopg2 database connection object
         """
-        conn.cursor.close()
-        conn.close()
+        self.cur.close()
+        self.conn.close()
         print("Connection to database has been closed.")
 
     def execute_statement(self, statement: str):
@@ -87,7 +86,7 @@ class DatabaseUtility:
         """
         query = f"select * from {table_name} where {column_name} = \'{value}\';"
         print(query)
-        self.conn.cursor().execute(query)
+        self.cur.execute(query)
         self.conn.commit()
-        res = self.conn.cursor().fetchone()
+        res = self.cur.fetchone()
         return res[id_col]
