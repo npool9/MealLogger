@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QApplication,
-    QInputDialog, QMessageBox
+    QInputDialog, QMessageBox, QRadioButton, QButtonGroup,
+    QWidget
 )
 from PyQt6.QtCore import Qt
 import sys
@@ -28,8 +29,9 @@ class IngredientEditor(QDialog):
 
         # -------- Table --------
         self.table = QTableWidget()
-        self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["Amount", "Unit", "Name", "Section", "Notes"])
+        self.table.setColumnCount(6)
+        self.table.setHorizontalHeaderLabels(["Amount", "Unit", "Name", "Section", "Notes", "Type"])
+        self.table.setColumnWidth(5, 200)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         layout.addWidget(self.table)
@@ -52,7 +54,7 @@ class IngredientEditor(QDialog):
         btn_remove.clicked.connect(self.remove_ingredient)
         btn_layout.addWidget(btn_remove)
 
-        btn_done = QPushButton("Save & Close")
+        btn_done = QPushButton("Save and Close")
         btn_done.clicked.connect(self.accept)
         btn_layout.addWidget(btn_done)
 
@@ -81,6 +83,9 @@ class IngredientEditor(QDialog):
                 item.setFlags(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
                 self.table.setItem(row, col, item)
 
+            type_widget = self.create_type_widget(ing)
+            self.table.setCellWidget(row, 5, type_widget)
+
     def add_ingredient(self):
         """
         Add an ingredient to the list
@@ -94,20 +99,18 @@ class IngredientEditor(QDialog):
         section, _ = QInputDialog.getText(self, "Add Ingredient", "Section (optional):")
         notes, _ = QInputDialog.getMultiLineText(self, "Add Ingredient", "Notes (optional):")
 
-        try:
-            amount_val = float(amount) if amount else None
-        except:
-            try:  # fraction
-                amount_val = float(amount.split('/')[0].strip()) / float(amount.split('/')[1].strip())
-            except:
-                amount_val = amount or None
+        if isinstance(amount, dict):
+            amount = f"{amount.get('min')}–{amount.get('max')}"
+        elif amount is None:
+            amount = ""
 
         self.ingredients.append({
-            "amount": amount_val,
+            "amount": amount,
             "unit": unit or None,
             "name": name,
             "notes": notes or None,
             "subsection": section or None,
+            "ingredient_type": "foundation",
             "original": None,
         })
 
@@ -144,16 +147,13 @@ class IngredientEditor(QDialog):
         if not ok:
             return
 
-        try:
-            amount_val = float(amount) if amount else None
-        except:
-            try:  # fraction
-                amount_val = float(amount.split('/')[0].strip()) / float(amount.split('/')[1].strip())
-            except:
-                amount_val = amount or None
+        if isinstance(amount, dict):
+            amount = f"{amount.get('min')}–{amount.get('max')}"
+        elif amount is None:
+            amount = ""
 
         ing.update({
-            "amount": amount_val,
+            "amount": amount,
             "unit": unit or None,
             "name": name,
             "subsection": section or None,
@@ -185,6 +185,45 @@ class IngredientEditor(QDialog):
         self.show()
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, False)
         self.show()
+
+    def create_type_widget(self, ing):
+        """
+        Create Foundation / Branded radio buttons for a table row
+        """
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        rb_foundation = QRadioButton("Foundation")
+        rb_branded = QRadioButton("Branded")
+
+        group = QButtonGroup(container)
+        group.setExclusive(True)
+        group.addButton(rb_foundation)
+        group.addButton(rb_branded)
+
+        # ---- ENSURE VALUE EXISTS IMMEDIATELY ----
+        if ing.get("ingredient_type") not in ("foundation", "branded"):
+            ing["ingredient_type"] = "foundation"
+
+        if ing["ingredient_type"] == "branded":
+            rb_branded.setChecked(True)
+        else:
+            rb_foundation.setChecked(True)
+
+        def on_change():
+            ing["ingredient_type"] = (
+                "branded" if rb_branded.isChecked() else "foundation"
+            )
+
+        rb_foundation.toggled.connect(on_change)
+        rb_branded.toggled.connect(on_change)
+
+        layout.addWidget(rb_foundation)
+        layout.addWidget(rb_branded)
+
+        return container
 
 
 if __name__ == "__main__":

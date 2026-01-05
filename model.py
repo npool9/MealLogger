@@ -101,6 +101,6 @@ class Model:
         """
         usda = USDAService()
         for ingredient in ingredients:
-            food_info = usda.search_foundation_food(ingredient["name"])
+            food_info = usda.search_food(ingredient["name"], food_type=ingredient["ingredient_type"])
             print(ingredient, "---", food_info)
         meal.describe()
