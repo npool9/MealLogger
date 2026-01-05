@@ -172,7 +172,7 @@ class IngredientEditor(QDialog):
             return
 
         ing = self.ingredients.pop(row)
-        QMessageBox.information(self, "Removed", f"Removed: {ing.get('name')}")
+        # QMessageBox.information(self, "Removed", f"Removed: {ing.get('name')}")
         self.refresh_table()
 
     def bring_to_front(self):
