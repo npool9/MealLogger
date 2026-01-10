@@ -28,6 +28,7 @@ class Flyway:
             self.cur = self.conn.cursor()
         except psycopg2.Error as e:
             raise Exception(f"Error creating database: {e}")
+        self.table_order = self.credentials["table_order"].split(',')
 
     def create_database(self, db_name: str):
         """
@@ -38,6 +39,11 @@ class Flyway:
         self.cur.execute("SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{}'".format(db_name))
         try:
             exists = self.cur.fetchone()
+            if not exists:
+                self.cur.execute("CREATE DATABASE \"{}\"".format(db_name))
+                self.conn.commit()
+            else:
+                print(f"{db_name} already exists.")
         except psycopg2.ProgrammingError:
             try:
                 self.cur.execute("CREATE DATABASE \"{}\"".format(db_name))
@@ -48,10 +54,11 @@ class Flyway:
             host=self.credentials["host"],
             user=self.credentials["user"],
             password=self.credentials["password"],
-            dbname=self.credentials["meal_db"],
+            dbname=self.credentials["app_db"],
             port=self.credentials["port"]  # Connect to a default database to create others
         )
         self.conn.commit()
+        self.cur = self.conn.cursor()
 
     def create_table(self, table_name: str):
         """
@@ -67,6 +74,18 @@ class Flyway:
             print(f"Relation \"{table_name}\" was already created")
             self.conn.commit()
 
+    def run_flyway(self):
+            """
+            Run flyway step for database
+            """
+            flyway = Flyway()
+            print(f"Creating database {self.credentials['app_db']}...")
+            flyway.create_database(self.credentials["app_db"])
+            for table in self.table_order:
+                print(f"Creating table {table}...")
+                flyway.create_table(table)
+
 
 if __name__ == "__main__":
     flyway = Flyway()
+    flyway.run_flyway()

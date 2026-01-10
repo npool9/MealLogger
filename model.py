@@ -18,12 +18,10 @@ class Model:
         Initialize
         """
         self.supported_websites = ["fitmencook"]
-        # Flyway parameters
-        self._init_db_name = "public"
-        self._meal_table_order = ["meals", "ingredients", "meal_ingredient_bridge"]
         # Open a database connection
         self._db_util = DatabaseUtility()
         self.creds = self._db_util.get_credentials()
+        self._meal_table_order = self.creds["table_order"].split(',')
         self.run_flyway()
         self._connection, self._cursor = self._db_util.connect(self.creds)
         self._meal_list = []
@@ -34,8 +32,8 @@ class Model:
         Run flyway step for database
         """
         flyway = Flyway()
-        print(f"Creating database {self.creds['meal_db']}...")
-        flyway.create_database(self.creds["meal_db"])
+        print(f"Creating database {self.creds['app_db']}...")
+        flyway.create_database(self.creds["app_db"])
         for table in self._meal_table_order:
             print(f"Creating table {table}...")
             flyway.create_table(table)

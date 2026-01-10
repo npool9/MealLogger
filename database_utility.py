@@ -46,7 +46,7 @@ class DatabaseUtility:
                 host=credentials["host"],
                 user=credentials["user"],
                 password=password,
-                dbname=credentials["meal_db"],
+                dbname=credentials["app_db"],
                 port=credentials["port"]  # Connect to a default database to create others
             )
             self.cur = self.conn.cursor()
