@@ -5,3 +5,4 @@ __pycache__/*
 .idea/*
 opennutrition*
 api_keys.json
+CLAUDE.md

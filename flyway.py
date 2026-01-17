@@ -75,15 +75,14 @@ class Flyway:
             self.conn.commit()
 
     def run_flyway(self):
-            """
-            Run flyway step for database
-            """
-            flyway = Flyway()
-            print(f"Creating database {self.credentials['app_db']}...")
-            flyway.create_database(self.credentials["app_db"])
-            for table in self.table_order:
-                print(f"Creating table {table}...")
-                flyway.create_table(table)
+        """
+        Run flyway step for database
+        """
+        print(f"Creating database {self.credentials['app_db']}...")
+        self.create_database(self.credentials["app_db"])
+        for table in self.table_order:
+            print(f"Creating table {table}...")
+            self.create_table(table)
 
 
 if __name__ == "__main__":

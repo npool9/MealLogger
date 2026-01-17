@@ -4,8 +4,10 @@ from usda_service import USDAService
 from meal_repository import MealRepository
 from database_utility import DatabaseUtility
 from fitmencook_search import FitMenCook
-from ingredient_parser import IngredientParser
+from local_ingredient_parser import IngredientParser
 from flyway import Flyway
+import json
+import os
 
 
 class Model:
@@ -26,6 +28,7 @@ class Model:
         self._connection, self._cursor = self._db_util.connect(self.creds)
         self._meal_list = []
         self._ingredient_parser = IngredientParser()
+        self.NUTRIENT_MAP = json.load(open(os.path.join(os.path.dirname(__file__), "nutrient_map.json"), 'r'))
 
     def run_flyway(self):
         """
@@ -91,14 +94,22 @@ class Model:
     def build_meal(self, meal, ingredients):
         """
         Build the full meal object from the list of ingredients provided and
-        the meal object template. Query the Nutritionix API for nutrition
+        the meal object template. Query the USDA API for nutrition
         information
         :param meal: the complete meal object
         :param ingredients: list of parsed ingredients (list of dicts)
         :return: the completed meal and ingredient objects
         """
+
         usda = USDAService()
         for ingredient in ingredients:
             food_info = usda.search_food(ingredient["name"], food_type=ingredient["ingredient_type"])
-            print(ingredient, "---", food_info)
+            name = list(food_info.keys())[0]
+            ing = Ingredient(name=name.title())
+            # TODO: check if this is right, also don't forget about the unit. Do I need to do conversion?
+            for nutrient in food_info[name]:
+                nutrient_name = nutrient["nutrientName"]
+                if nutrient_name in self.NUTRIENT_MAP:
+                    prop_name = self.NUTRIENT_MAP[nutrient_name]
+                    setattr(ing, prop_name, nutrient["value"])
         meal.describe()

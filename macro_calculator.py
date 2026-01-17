@@ -1,4 +1,4 @@
-from ingredient_parser import IngredientParser
+from local_ingredient_parser import IngredientParser
 
 
 # TODO: pass everything through the ingredient parser

@@ -1,0 +1,17 @@
+{
+  "Energy": "calories_per_unit",
+  "Carbohydrate, by difference": "carbs_per_unit",
+  "Total lipid (fat)": "fat_per_unit",
+  "Fiber, total dietary": "fiber_per_unit",
+  "Sugars, total including NLEA": "sugar_per_unit",
+  "Fatty acids, total saturated": "saturated_fat_per_unit",
+  "Fatty acids, total trans": "trans_fat_per_unit",
+  "Cholesterol": "cholesterol_mg_per_unit",
+  "Sodium, Na": "sodium_mg_per_unit",
+  "Potassium, K": "potassium_mg_per_unit",
+  "Calcium, Ca": "calcium_mg_per_unit",
+  "Iron, Fe": "iron_mg_per_unit",
+  "Vitamin A, RAE": "vitamin_a_ug_per_unit",
+  "Vitamin C, total ascorbic acid": "vitamin_c_mg_per_unit",
+  "Vitamin D (D2 + D3)": "vitamin_d_ug_per_unit"
+}

@@ -52,6 +52,7 @@ class FitMenCook(RecipeSearch):
         meal.recipe_url = recipe_url
         meal.website_name = self._name
         ingredients = self._rp.parse_recipe_url(recipe_url)
+        print(ingredients)
         return ingredients
 
     def get_recipe_steps(self, meal):
