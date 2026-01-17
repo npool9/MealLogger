@@ -127,11 +127,20 @@ class IngredientEditor(QDialog):
 
         ing = self.ingredients[row]
 
+        # Format amount as string for the dialog
+        current_amount = ing.get("amount")
+        if isinstance(current_amount, dict):
+            current_amount = f"{current_amount.get('min')}–{current_amount.get('max')}"
+        elif current_amount is None:
+            current_amount = ""
+        else:
+            current_amount = str(current_amount)
+
         name, ok = QInputDialog.getText(self, "Edit Ingredient", "Name:", text=ing.get("name") or "")
         if not ok:
             return
 
-        amount, ok = QInputDialog.getText(self, "Edit Ingredient", "Amount:", text=str(ing.get("amount") or ""))
+        amount, ok = QInputDialog.getText(self, "Edit Ingredient", "Amount:", text=current_amount)
         if not ok:
             return
 

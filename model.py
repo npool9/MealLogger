@@ -4,7 +4,6 @@ from usda_service import USDAService
 from meal_repository import MealRepository
 from database_utility import DatabaseUtility
 from fitmencook_search import FitMenCook
-from local_ingredient_parser import IngredientParser
 from flyway import Flyway
 import json
 import os
@@ -27,7 +26,6 @@ class Model:
         self.run_flyway()
         self._connection, self._cursor = self._db_util.connect(self.creds)
         self._meal_list = []
-        self._ingredient_parser = IngredientParser()
         self.NUTRIENT_MAP = json.load(open(os.path.join(os.path.dirname(__file__), "nutrient_map.json"), 'r'))
 
     def run_flyway(self):
@@ -112,4 +110,5 @@ class Model:
                 if nutrient_name in self.NUTRIENT_MAP:
                     prop_name = self.NUTRIENT_MAP[nutrient_name]
                     setattr(ing, prop_name, nutrient["value"])
+            ing.describe()
         meal.describe()

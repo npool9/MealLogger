@@ -196,3 +196,25 @@ class Ingredient(object):
     @default_unit.setter
     def default_unit(self, value):
         self._default_unit = value
+
+    def describe(self):
+        """Print all ingredient properties in a readable format"""
+        print(f"\n--- {self.name} ---")
+        print(f"  Calories:       {self.calories_per_unit}")
+        print(f"  Protein:        {self.protein_per_unit}g")
+        print(f"  Carbs:          {self.carbs_per_unit}g")
+        print(f"  Fat:            {self.fat_per_unit}g")
+        print(f"  Fiber:          {self.fiber_per_unit}g")
+        print(f"  Sugar:          {self.sugar_per_unit}g")
+        print(f"  Saturated Fat:  {self.saturated_fat_per_unit}g")
+        print(f"  Trans Fat:      {self.trans_fat_per_unit}g")
+        print(f"  Cholesterol:    {self.cholesterol_mg_per_unit}mg")
+        print(f"  Sodium:         {self.sodium_mg_per_unit}mg")
+        print(f"  Potassium:      {self.potassium_mg_per_unit}mg")
+        print(f"  Calcium:        {self.calcium_mg_per_unit}mg")
+        print(f"  Iron:           {self.iron_mg_per_unit}mg")
+        print(f"  Vitamin A:      {self.vitamin_a_ug_per_unit}ug")
+        print(f"  Vitamin C:      {self.vitamin_c_mg_per_unit}mg")
+        print(f"  Vitamin D:      {self.vitamin_d_ug_per_unit}ug")
+        print(f"  Default Unit:   {self.default_unit}")
+        print("-------------------\n")

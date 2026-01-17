@@ -51,7 +51,7 @@ class FitMenCook(RecipeSearch):
         recipe_url = self.search_for_meal()
         meal.recipe_url = recipe_url
         meal.website_name = self._name
-        ingredients = self._rp.parse_recipe_url(recipe_url)
+        ingredients = self._rp.parse_recipe_from_url(recipe_url)
         print(ingredients)
         return ingredients
 
@@ -60,103 +60,12 @@ class FitMenCook(RecipeSearch):
         Get the description of the given recipe
         :param meal: the meal object
         """
-        r = requests.get(meal.recipe_url, timeout=15)
-        r.raise_for_status()
-        html = r.text
-        soup = BeautifulSoup(html, "html.parser")
-        # --------------------------------------------------
-        # 1. Try JSON-LD (the most reliable format)
-        # --------------------------------------------------
-        steps = []
-        for script in soup.find_all("script", type="application/ld+json"):
-            try:
-                import json
-                data = json.loads(script.string.strip())
-            except Exception:
-                continue
-            # Flatten lists
-            def walk(obj):
-                if isinstance(obj, list):
-                    for item in obj:
-                        yield from walk(item)
-                elif isinstance(obj, dict):
-                    yield obj
-                    for v in obj.values():
-                        yield from walk(v)
-            for node in walk(data):
-                if isinstance(node, dict) and node.get("@type", "").lower() == "recipe":
-                    instr = node.get("recipeInstructions")
-                    if instr:
-                        # recipeInstructions may be:
-                        # 1) list of steps (HowToStep objects)
-                        # 2) single long string
-                        if isinstance(instr, list):
-                            for step in instr:
-                                if isinstance(step, dict) and "text" in step:
-                                    steps.append(step["text"].strip())
-                                elif isinstance(step, str):
-                                    steps.append(step.strip())
-                        elif isinstance(instr, str):
-                            # Break into lines
-                            steps.extend([s.strip() for s in instr.split("\n") if s.strip()])
-                    if steps:
-                        return "\n".join(f"{i + 1}. {s}" for i, s in enumerate(steps))
-        # --------------------------------------------------
-        # 2. Fallback: Find instructions section by heading
-        # --------------------------------------------------
-        heading_regex = re.compile(r"(instruction|direction|method|how to)", re.I)
-        # Find headings that look like "Instructions"
-        candidate_headings = []
-        for tag_name in ["h1", "h2", "h3", "h4", "h5", "h6", "strong", "b"]:
-            for tag in soup.find_all(tag_name):
-                text = tag.get_text(strip=True).lower()
-                if heading_regex.search(text):
-                    candidate_headings.append(tag)
-        # If no headings found, fallback to any block with numbered steps
-        if not candidate_headings:
-            paragraphs = soup.find_all(["p", "li"])
-            for elem in paragraphs:
-                t = elem.get_text(" ", strip=True)
-                if re.match(r"^\d+[\).]", t):  # "1.) Step text"
-                    steps.append(t)
-            if steps:
-                return "\n".join(steps)
-        # --------------------------------------------------
-        # 3. Extract text after the heading until next major section
-        # --------------------------------------------------
-        for head in candidate_headings:
-            for sibling in head.find_all_next():
-                # Stop if we hit another major section
-                if sibling.name in ["h1", "h2", "h3"] and sibling != head:
-                    break
-                # Collect list items
-                if sibling.name in ["ol", "ul"]:
-                    for li in sibling.find_all("li"):
-                        t = li.get_text(" ", strip=True)
-                        if t and len(t) < 500:
-                            steps.append(t)
-                    break
-                # Collect paragraph-style steps
-                if sibling.name == "p":
-                    t = sibling.get_text(" ", strip=True)
-                    if re.search(r"\d", t) and len(t) < 500:
-                        steps.append(t)
-            if steps:
-                break
-        # --------------------------------------------------
-        # 4. Format output
-        # --------------------------------------------------
-        steps = [s.strip() for s in steps if s.strip()]
-        if not steps:
-            return ""
-        # Add numbering if missing
-        output = []
-        for i, step in enumerate(steps, 1):
-            if re.match(r"^\d+\.", step):
-                output.append(step)
-            else:
-                output.append(f"{i}. {step}")
-        return "\n".join(output)
+        rp = RecipeParser()
+        rec = rp.get_recipe_jsonld(meal.recipe_url)
+        instructions = []
+        if "recipeInstructions" in rec:
+            instructions = rec["recipeInstructions"]
+        return '\n'.join(instructions)
 
     def get_recipe_servings(self, meal):
         """

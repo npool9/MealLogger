@@ -47,9 +47,12 @@ class RecipeParser:
         # Extract amount (use first quantity if available)
         amount = None
         if parsed.amount:
-            qty = parsed.amount[0].quantity
-            if qty is not None:
-                amount = float(qty)
+            qty_min = parsed.amount[0].quantity
+            qty_max = parsed.amount[0].quantity_max
+            if qty_min == qty_max:
+                amount = float(qty_min)
+            else:
+                amount = {"max": float(qty_max), "min": float(qty_min)}
 
         # Extract and normalize unit
         unit = None
@@ -71,7 +74,7 @@ class RecipeParser:
         return {
             'original': original,
             'amount': amount,
-            'unit': str(unit),
+            'unit': str(unit) if unit is not None else None,
             'name': name,
             'notes': notes
         }
@@ -87,13 +90,25 @@ class RecipeParser:
             parsed_recipe.append(self.parse_ingredient_line(ing))
         return parsed_recipe
 
+    def parse_recipe_from_url(self, url):
+        """
+        Parse recipe from URL
+        :param url: the url to the recipe
+        :return: list of dictionaries, parsed ingredients with original, amount, unit, name, and notes keys/values
+        """
+        recipe = self.get_recipe_jsonld(url)
+        if "recipeIngredient" in recipe:
+            recipe = recipe["recipeIngredient"]
+        recipe = self.parse_recipe(recipe)
+        return recipe
+
 
 # ----------------------------- Example usage -----------------------------
 if __name__ == "__main__":
     rp = RecipeParser()
     url = "https://fitmencook.com/recipes/gochujang-ramen-recipe/"
-    recipe = rp.get_recipe_jsonld(url)
-    if "recipeIngredient" in recipe:
-        recipe = recipe["recipeIngredient"]
-    recipe = rp.parse_recipe(recipe)
-    print(recipe)
+    rec = rp.get_recipe_jsonld(url)
+    if "recipeIngredient" in rec:
+        rec = rec["recipeIngredient"]
+    rec = rp.parse_recipe(rec)
+    print(rec)

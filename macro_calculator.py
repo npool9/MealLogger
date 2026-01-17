@@ -1,4 +1,3 @@
-from local_ingredient_parser import IngredientParser
 
 
 # TODO: pass everything through the ingredient parser
@@ -19,7 +18,8 @@ class MacroCalculator:
         Parse each of the ingredients for their measurement
         :return: dictionary of ingredient (str) -> value + unit of measurement (str)
         """
-        parser = IngredientParser()
+        # parser = IngredientParser()
+        pass
         
 
 
