@@ -69,26 +69,29 @@ A Python application that automatically scrapes recipes from cooking websites, p
 | created_at | TIMESTAMP | Creation timestamp |
 
 **ingredients**
+
+> **Note:** All `_per_gram` nutrient columns store values in grams, regardless of the nutrient's conventional unit (mg, mcg, etc.).
+
 | Column | Type | Description |
 |--------|------|-------------|
 | id | SERIAL | Primary key |
 | name | TEXT | Ingredient name |
-| calories_per_unit | NUMERIC | Calories |
-| protein_per_unit | NUMERIC | Protein (g) |
-| carbs_per_unit | NUMERIC | Carbohydrates (g) |
-| fat_per_unit | NUMERIC | Fat (g) |
-| fiber_per_unit | NUMERIC | Fiber (g) |
-| sugar_per_unit | NUMERIC | Sugar (g) |
-| saturated_fat_per_unit | NUMERIC | Saturated fat (g) |
-| trans_fat_per_unit | NUMERIC | Trans fat (g) |
-| cholesterol_mg_per_unit | NUMERIC | Cholesterol (mg) |
-| sodium_mg_per_unit | NUMERIC | Sodium (mg) |
-| potassium_mg_per_unit | NUMERIC | Potassium (mg) |
-| calcium_mg_per_unit | NUMERIC | Calcium (mg) |
-| iron_mg_per_unit | NUMERIC | Iron (mg) |
-| vitamin_a_ug_per_unit | NUMERIC | Vitamin A (mcg) |
-| vitamin_c_mg_per_unit | NUMERIC | Vitamin C (mg) |
-| vitamin_d_ug_per_unit | NUMERIC | Vitamin D (mcg) |
+| calories_per_gram | NUMERIC | Calories |
+| protein_per_gram | NUMERIC | Protein |
+| carbs_per_gram | NUMERIC | Carbohydrates |
+| fat_per_gram | NUMERIC | Fat |
+| fiber_per_gram | NUMERIC | Fiber |
+| sugar_per_gram | NUMERIC | Sugar |
+| saturated_fat_per_gram | NUMERIC | Saturated fat |
+| trans_fat_per_gram | NUMERIC | Trans fat |
+| cholesterol_per_gram | NUMERIC | Cholesterol |
+| sodium_per_gram | NUMERIC | Sodium |
+| potassium_per_gram | NUMERIC | Potassium |
+| calcium_per_gram | NUMERIC | Calcium |
+| iron_per_gram | NUMERIC | Iron |
+| vitamin_a_per_gram | NUMERIC | Vitamin A |
+| vitamin_c_per_gram | NUMERIC | Vitamin C |
+| vitamin_d_per_gram | NUMERIC | Vitamin D |
 | default_unit | TEXT | Default measurement unit |
 
 **meal_ingredient_bridge**

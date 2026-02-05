@@ -104,11 +104,15 @@ class Model:
             food_info = usda.search_food(ingredient["name"], food_type=ingredient["ingredient_type"])
             name = list(food_info.keys())[0]
             ing = Ingredient(name=name.title())
+            print(ingredient)
+            # Get default unit of ingredient
             # TODO: check if this is right, also don't forget about the unit. Do I need to do conversion?
-            for nutrient in food_info[name]:
-                nutrient_name = nutrient["nutrientName"]
-                if nutrient_name in self.NUTRIENT_MAP:
-                    prop_name = self.NUTRIENT_MAP[nutrient_name]
-                    setattr(ing, prop_name, nutrient["value"])
+            nutrient_fields = usda.parse_nutrients_to_ingredient_fields(food_info[name])
+            print(nutrient_fields)
+            for nutrient_name in nutrient_fields:
+                if nutrient_name.endswith("_unit"):
+                    continue
+                val = nutrient_fields[nutrient_name] / 100  # convert from "per 100g" to "per 1g" of food/ingredient
+                setattr(ing, nutrient_name, val)
             ing.describe()
         meal.describe()

@@ -7,42 +7,42 @@ class Ingredient(object):
         self,
         id=None,
         name=None,
-        calories_per_unit=None,
-        protein_per_unit=None,
-        carbs_per_unit=None,
-        fat_per_unit=None,
-        fiber_per_unit=None,
-        sugar_per_unit=None,
-        saturated_fat_per_unit=None,
-        trans_fat_per_unit=None,
-        cholesterol_mg_per_unit=None,
-        sodium_mg_per_unit=None,
-        potassium_mg_per_unit=None,
-        calcium_mg_per_unit=None,
-        iron_mg_per_unit=None,
-        vitamin_a_ug_per_unit=None,
-        vitamin_c_mg_per_unit=None,
-        vitamin_d_ug_per_unit=None,
+        calories_per_gram=None,
+        protein_per_gram=None,
+        carbs_per_gram=None,
+        fat_per_gram=None,
+        fiber_per_gram=None,
+        sugar_per_gram=None,
+        saturated_fat_per_gram=None,
+        trans_fat_per_gram=None,
+        cholesterol_per_gram=None,
+        sodium_per_gram=None,
+        potassium_per_gram=None,
+        calcium_per_gram=None,
+        iron_per_gram=None,
+        vitamin_a_per_gram=None,
+        vitamin_c_per_gram=None,
+        vitamin_d_per_gram=None,
         default_unit=None,
     ):
         self._id = id
         self._name = name
-        self._calories_per_unit = calories_per_unit
-        self._protein_per_unit = protein_per_unit
-        self._carbs_per_unit = carbs_per_unit
-        self._fat_per_unit = fat_per_unit
-        self._fiber_per_unit = fiber_per_unit
-        self._sugar_per_unit = sugar_per_unit
-        self._saturated_fat_per_unit = saturated_fat_per_unit
-        self._trans_fat_per_unit = trans_fat_per_unit
-        self._cholesterol_mg_per_unit = cholesterol_mg_per_unit
-        self._sodium_mg_per_unit = sodium_mg_per_unit
-        self._potassium_mg_per_unit = potassium_mg_per_unit
-        self._calcium_mg_per_unit = calcium_mg_per_unit
-        self._iron_mg_per_unit = iron_mg_per_unit
-        self._vitamin_a_ug_per_unit = vitamin_a_ug_per_unit
-        self._vitamin_c_mg_per_unit = vitamin_c_mg_per_unit
-        self._vitamin_d_ug_per_unit = vitamin_d_ug_per_unit
+        self._calories_per_gram = calories_per_gram
+        self._protein_per_gram = protein_per_gram
+        self._carbs_per_gram = carbs_per_gram
+        self._fat_per_gram = fat_per_gram
+        self._fiber_per_gram = fiber_per_gram
+        self._sugar_per_gram = sugar_per_gram
+        self._saturated_fat_per_gram = saturated_fat_per_gram
+        self._trans_fat_per_gram = trans_fat_per_gram
+        self._cholesterol_per_gram = cholesterol_per_gram
+        self._sodium_per_gram = sodium_per_gram
+        self._potassium_per_gram = potassium_per_gram
+        self._calcium_per_gram = calcium_per_gram
+        self._iron_per_gram = iron_per_gram
+        self._vitamin_a_per_gram = vitamin_a_per_gram
+        self._vitamin_c_per_gram = vitamin_c_per_gram
+        self._vitamin_d_per_gram = vitamin_d_per_gram
         self._default_unit = default_unit
 
     @property
@@ -62,132 +62,132 @@ class Ingredient(object):
         self._name = value
 
     @property
-    def calories_per_unit(self):
-        return self._calories_per_unit
+    def calories_per_gram(self):
+        return self._calories_per_gram
 
-    @calories_per_unit.setter
-    def calories_per_unit(self, value):
-        self._calories_per_unit = value
-
-    @property
-    def protein_per_unit(self):
-        return self._protein_per_unit
-
-    @protein_per_unit.setter
-    def protein_per_unit(self, value):
-        self._protein_per_unit = value
+    @calories_per_gram.setter
+    def calories_per_gram(self, value):
+        self._calories_per_gram = value
 
     @property
-    def carbs_per_unit(self):
-        return self._carbs_per_unit
+    def protein_per_gram(self):
+        return self._protein_per_gram
 
-    @carbs_per_unit.setter
-    def carbs_per_unit(self, value):
-        self._carbs_per_unit = value
-
-    @property
-    def fat_per_unit(self):
-        return self._fat_per_unit
-
-    @fat_per_unit.setter
-    def fat_per_unit(self, value):
-        self._fat_per_unit = value
+    @protein_per_gram.setter
+    def protein_per_gram(self, value):
+        self._protein_per_gram = value
 
     @property
-    def fiber_per_unit(self):
-        return self._fiber_per_unit
+    def carbs_per_gram(self):
+        return self._carbs_per_gram
 
-    @fiber_per_unit.setter
-    def fiber_per_unit(self, value):
-        self._fiber_per_unit = value
-
-    @property
-    def sugar_per_unit(self):
-        return self._sugar_per_unit
-
-    @sugar_per_unit.setter
-    def sugar_per_unit(self, value):
-        self._sugar_per_unit = value
+    @carbs_per_gram.setter
+    def carbs_per_gram(self, value):
+        self._carbs_per_gram = value
 
     @property
-    def saturated_fat_per_unit(self):
-        return self._saturated_fat_per_unit
+    def fat_per_gram(self):
+        return self._fat_per_gram
 
-    @saturated_fat_per_unit.setter
-    def saturated_fat_per_unit(self, value):
-        self._saturated_fat_per_unit = value
-
-    @property
-    def trans_fat_per_unit(self):
-        return self._trans_fat_per_unit
-
-    @trans_fat_per_unit.setter
-    def trans_fat_per_unit(self, value):
-        self._trans_fat_per_unit = value
+    @fat_per_gram.setter
+    def fat_per_gram(self, value):
+        self._fat_per_gram = value
 
     @property
-    def cholesterol_mg_per_unit(self):
-        return self._cholesterol_mg_per_unit
+    def fiber_per_gram(self):
+        return self._fiber_per_gram
 
-    @cholesterol_mg_per_unit.setter
-    def cholesterol_mg_per_unit(self, value):
-        self._cholesterol_mg_per_unit = value
-
-    @property
-    def sodium_mg_per_unit(self):
-        return self._sodium_mg_per_unit
-
-    @sodium_mg_per_unit.setter
-    def sodium_mg_per_unit(self, value):
-        self._sodium_mg_per_unit = value
+    @fiber_per_gram.setter
+    def fiber_per_gram(self, value):
+        self._fiber_per_gram = value
 
     @property
-    def potassium_mg_per_unit(self):
-        return self._potassium_mg_per_unit
+    def sugar_per_gram(self):
+        return self._sugar_per_gram
 
-    @potassium_mg_per_unit.setter
-    def potassium_mg_per_unit(self, value):
-        self._potassium_mg_per_unit = value
-
-    @property
-    def calcium_mg_per_unit(self):
-        return self._calcium_mg_per_unit
-
-    @calcium_mg_per_unit.setter
-    def calcium_mg_per_unit(self, value):
-        self._calcium_mg_per_unit = value
+    @sugar_per_gram.setter
+    def sugar_per_gram(self, value):
+        self._sugar_per_gram = value
 
     @property
-    def iron_mg_per_unit(self):
-        return self._iron_mg_per_unit
+    def saturated_fat_per_gram(self):
+        return self._saturated_fat_per_gram
 
-    @iron_mg_per_unit.setter
-    def iron_mg_per_unit(self, value):
-        self._iron_mg_per_unit = value
-
-    @property
-    def vitamin_a_ug_per_unit(self):
-        return self._vitamin_a_ug_per_unit
-
-    @vitamin_a_ug_per_unit.setter
-    def vitamin_a_ug_per_unit(self, value):
-        self._vitamin_a_ug_per_unit = value
+    @saturated_fat_per_gram.setter
+    def saturated_fat_per_gram(self, value):
+        self._saturated_fat_per_gram = value
 
     @property
-    def vitamin_c_mg_per_unit(self):
-        return self._vitamin_c_mg_per_unit
+    def trans_fat_per_gram(self):
+        return self._trans_fat_per_gram
 
-    @vitamin_c_mg_per_unit.setter
-    def vitamin_c_mg_per_unit(self, value):
-        self._vitamin_c_mg_per_unit = value
+    @trans_fat_per_gram.setter
+    def trans_fat_per_gram(self, value):
+        self._trans_fat_per_gram = value
 
     @property
-    def vitamin_d_ug_per_unit(self):
-        return self._vitamin_d_ug_per_unit
+    def cholesterol_per_gram(self):
+        return self._cholesterol_per_gram
 
-    @vitamin_d_ug_per_unit.setter
-    def vitamin_d_ug_per_unit(self, value):
-        self._vitamin_d_ug_per_unit = value
+    @cholesterol_per_gram.setter
+    def cholesterol_per_gram(self, value):
+        self._cholesterol_per_gram = value
+
+    @property
+    def sodium_per_gram(self):
+        return self._sodium_per_gram
+
+    @sodium_per_gram.setter
+    def sodium_per_gram(self, value):
+        self._sodium_per_gram = value
+
+    @property
+    def potassium_per_gram(self):
+        return self._potassium_per_gram
+
+    @potassium_per_gram.setter
+    def potassium_per_gram(self, value):
+        self._potassium_per_gram = value
+
+    @property
+    def calcium_per_gram(self):
+        return self._calcium_per_gram
+
+    @calcium_per_gram.setter
+    def calcium_per_gram(self, value):
+        self._calcium_per_gram = value
+
+    @property
+    def iron_per_gram(self):
+        return self._iron_per_gram
+
+    @iron_per_gram.setter
+    def iron_per_gram(self, value):
+        self._iron_per_gram = value
+
+    @property
+    def vitamin_a_per_gram(self):
+        return self._vitamin_a_per_gram
+
+    @vitamin_a_per_gram.setter
+    def vitamin_a_per_gram(self, value):
+        self._vitamin_a_per_gram = value
+
+    @property
+    def vitamin_c_per_gram(self):
+        return self._vitamin_c_per_gram
+
+    @vitamin_c_per_gram.setter
+    def vitamin_c_per_gram(self, value):
+        self._vitamin_c_per_gram = value
+
+    @property
+    def vitamin_d_per_gram(self):
+        return self._vitamin_d_per_gram
+
+    @vitamin_d_per_gram.setter
+    def vitamin_d_per_gram(self, value):
+        self._vitamin_d_per_gram = value
 
     @property
     def default_unit(self):
@@ -200,21 +200,21 @@ class Ingredient(object):
     def describe(self):
         """Print all ingredient properties in a readable format"""
         print(f"\n--- {self.name} ---")
-        print(f"  Calories:       {self.calories_per_unit}")
-        print(f"  Protein:        {self.protein_per_unit}g")
-        print(f"  Carbs:          {self.carbs_per_unit}g")
-        print(f"  Fat:            {self.fat_per_unit}g")
-        print(f"  Fiber:          {self.fiber_per_unit}g")
-        print(f"  Sugar:          {self.sugar_per_unit}g")
-        print(f"  Saturated Fat:  {self.saturated_fat_per_unit}g")
-        print(f"  Trans Fat:      {self.trans_fat_per_unit}g")
-        print(f"  Cholesterol:    {self.cholesterol_mg_per_unit}mg")
-        print(f"  Sodium:         {self.sodium_mg_per_unit}mg")
-        print(f"  Potassium:      {self.potassium_mg_per_unit}mg")
-        print(f"  Calcium:        {self.calcium_mg_per_unit}mg")
-        print(f"  Iron:           {self.iron_mg_per_unit}mg")
-        print(f"  Vitamin A:      {self.vitamin_a_ug_per_unit}ug")
-        print(f"  Vitamin C:      {self.vitamin_c_mg_per_unit}mg")
-        print(f"  Vitamin D:      {self.vitamin_d_ug_per_unit}ug")
+        print(f"  Calories:       {self.calories_per_gram}kcal")
+        print(f"  Protein:        {self.protein_per_gram}g")
+        print(f"  Carbs:          {self.carbs_per_gram}g")
+        print(f"  Fat:            {self.fat_per_gram}g")
+        print(f"  Fiber:          {self.fiber_per_gram}g")
+        print(f"  Sugar:          {self.sugar_per_gram}g")
+        print(f"  Saturated Fat:  {self.saturated_fat_per_gram}g")
+        print(f"  Trans Fat:      {self.trans_fat_per_gram}g")
+        print(f"  Cholesterol:    {self.cholesterol_per_gram}g")
+        print(f"  Sodium:         {self.sodium_per_gram}g")
+        print(f"  Potassium:      {self.potassium_per_gram}g")
+        print(f"  Calcium:        {self.calcium_per_gram}g")
+        print(f"  Iron:           {self.iron_per_gram}g")
+        print(f"  Vitamin A:      {self.vitamin_a_per_gram}g")
+        print(f"  Vitamin C:      {self.vitamin_c_per_gram}g")
+        print(f"  Vitamin D:      {self.vitamin_d_per_gram}g")
         print(f"  Default Unit:   {self.default_unit}")
         print("-------------------\n")
