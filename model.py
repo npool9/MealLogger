@@ -2,6 +2,7 @@ from meal import Meal
 from ingredient import Ingredient
 from usda_service import USDAService
 from meal_repository import MealRepository
+from ingredient_repository import IngredientRepository
 from database_utility import DatabaseUtility
 from fitmencook_search import FitMenCook
 from flyway import Flyway
@@ -55,14 +56,16 @@ class Model:
         meal = Meal(*row)
         return meal, exists
 
-    def find_meal(self, meal):
+    def scrape_meal(self, meal_name: str) -> tuple[Meal, list]:
         """
-        Find the provided meal on a recipe website
-        :param meal: the meal object that's not already in database (str)
-        :return: list of ingredients
+        Scrape a recipe website for meal details and ingredients.
+
+        :param meal_name: the name of the meal to search for
+        :return: tuple of (populated Meal object, list of parsed ingredients)
         """
         # TODO: Ask user for the website to search
         print("Supported Websites:", self.supported_websites)
+        meal = Meal(name=meal_name)
         search = FitMenCook(meal)
         print("Getting ingredients list...")
         ingredient_list = search.get_ingredients(meal)
@@ -71,7 +74,7 @@ class Model:
         print("Getting recipe servings...")
         meal.servings = search.get_recipe_servings(meal)
         meal.serving_size, meal.serving_unit = search.get_serving_size_and_unit(meal)
-        return ingredient_list
+        return meal, ingredient_list
 
     def insert_meal(self, meal: Meal):
         """
@@ -79,6 +82,13 @@ class Model:
         :param meal: the completed meal (without id and created_at)
         """
         MealRepository(self._db_util).insert(meal)
+
+    def insert_ingredient(self, ingredient):
+        """
+        Insert the ingredient into the database
+        :param ingredient: the ingredient (without id)
+        """
+        IngredientRepository(self._db_util).insert(ingredient)
 
     def process_ingredients(self, ingredient_list: list):
         """
@@ -89,30 +99,33 @@ class Model:
             # lookup nutrition information about ingredient
             pass
 
-    def build_meal(self, meal, ingredients):
+    def fetch_ingredients(self, ingredients: list[dict]) -> list[Ingredient]:
         """
-        Build the full meal object from the list of ingredients provided and
-        the meal object template. Query the USDA API for nutrition
-        information
-        :param meal: the complete meal object
-        :param ingredients: list of parsed ingredients (list of dicts)
-        :return: the completed meal and ingredient objects
-        """
+        Query the USDA API for nutritional data and build Ingredient objects.
+        For each parsed ingredient, search the USDA FoodData Central database,
+        retrieve nutrient values, convert them to per-gram amounts, and
+        populate an Ingredient object.
 
+        :param ingredients: Parsed ingredient dicts, each containing:
+            - name: ingredient name to search for
+            - ingredient_type: 'foundation' or 'branded'
+        :return: List of Ingredient objects with nutrient fields populated
+        """
         usda = USDAService()
+        ingredients_list = []
         for ingredient in ingredients:
             food_info = usda.search_food(ingredient["name"], food_type=ingredient["ingredient_type"])
             name = list(food_info.keys())[0]
             ing = Ingredient(name=name.title())
-            print(ingredient)
+            # print(ingredient)
             # Get default unit of ingredient
-            # TODO: check if this is right, also don't forget about the unit. Do I need to do conversion?
             nutrient_fields = usda.parse_nutrients_to_ingredient_fields(food_info[name])
-            print(nutrient_fields)
+            # print(nutrient_fields)
             for nutrient_name in nutrient_fields:
                 if nutrient_name.endswith("_unit"):
                     continue
                 val = nutrient_fields[nutrient_name] / 100  # convert from "per 100g" to "per 1g" of food/ingredient
                 setattr(ing, nutrient_name, val)
-            ing.describe()
-        meal.describe()
+            # ing.describe()
+            ingredients_list.append(ing)
+        return ingredients_list

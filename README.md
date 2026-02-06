@@ -92,7 +92,6 @@ A Python application that automatically scrapes recipes from cooking websites, p
 | vitamin_a_per_gram | NUMERIC | Vitamin A |
 | vitamin_c_per_gram | NUMERIC | Vitamin C |
 | vitamin_d_per_gram | NUMERIC | Vitamin D |
-| default_unit | TEXT | Default measurement unit |
 
 **meal_ingredient_bridge**
 | Column | Type | Description |

@@ -65,16 +65,16 @@ class DatabaseUtility:
         self.conn.close()
         print("Connection to database has been closed.")
 
-    def execute_statement(self, statement: str):
+    def execute_statement(self, statement: str, params=None):
         """
         Execute an update, insert, or delete statement
         :param statement: the statement to execute
+        :param params: optional tuple of parameters for parameterized queries
         """
-        self.cur.execute(statement)
+        self.cur.execute(statement, params)
         row_id = self.cur.fetchone()[0]
         self.conn.commit()
         return row_id
-
 
     def get_row_id(self, table_name: str, column_name: str, value: str, id_col="id"):
         """

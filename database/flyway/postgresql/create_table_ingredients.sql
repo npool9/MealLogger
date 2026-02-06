@@ -24,7 +24,5 @@ CREATE TABLE ingredients (
     -- Vitamins
     vitamin_a_per_gram      NUMERIC,
     vitamin_c_per_gram      NUMERIC,
-    vitamin_d_per_gram      NUMERIC,
-
-    default_unit        TEXT NOT NULL
+    vitamin_d_per_gram      NUMERIC
 );

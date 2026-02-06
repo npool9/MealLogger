@@ -22,8 +22,7 @@ class Ingredient(object):
         iron_per_gram=None,
         vitamin_a_per_gram=None,
         vitamin_c_per_gram=None,
-        vitamin_d_per_gram=None,
-        default_unit=None,
+        vitamin_d_per_gram=None
     ):
         self._id = id
         self._name = name
@@ -43,7 +42,6 @@ class Ingredient(object):
         self._vitamin_a_per_gram = vitamin_a_per_gram
         self._vitamin_c_per_gram = vitamin_c_per_gram
         self._vitamin_d_per_gram = vitamin_d_per_gram
-        self._default_unit = default_unit
 
     @property
     def id(self):
@@ -189,14 +187,6 @@ class Ingredient(object):
     def vitamin_d_per_gram(self, value):
         self._vitamin_d_per_gram = value
 
-    @property
-    def default_unit(self):
-        return self._default_unit
-
-    @default_unit.setter
-    def default_unit(self, value):
-        self._default_unit = value
-
     def describe(self):
         """Print all ingredient properties in a readable format"""
         print(f"\n--- {self.name} ---")
@@ -216,5 +206,4 @@ class Ingredient(object):
         print(f"  Vitamin A:      {self.vitamin_a_per_gram}g")
         print(f"  Vitamin C:      {self.vitamin_c_per_gram}g")
         print(f"  Vitamin D:      {self.vitamin_d_per_gram}g")
-        print(f"  Default Unit:   {self.default_unit}")
         print("-------------------\n")

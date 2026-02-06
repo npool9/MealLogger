@@ -49,7 +49,7 @@ class USDAService:
         else:
             raise Exception(f"Invalid food type: {food_type} not in [branded, foundation]")
         r = requests.get(url)
-        print("USDA Endpoint:", url)
+        # print("USDA Endpoint:", url)
         if r.status_code != 200:
             raise Exception(f"Couldn't get food search response for \"{food_keywords}\"")
         r = r.json()
