@@ -127,22 +127,30 @@ class Model:
         ingredients_list = []
         for ingredient in ingredients:
             food_info = usda.search_food(ingredient["name"], food_type=ingredient["ingredient_type"])
-            name = list(food_info.keys())[0]
-            ing = Ingredient(name=name.title())
-            # print(ingredient)
-            # Get default unit of ingredient
-            nutrient_fields = usda.parse_nutrients_to_ingredient_fields(food_info[name])
-            # print(nutrient_fields)
+            ing = Ingredient(name=food_info["name"].title())
+            # Parse nutrient fields and convert to per-gram values
+            nutrient_fields = usda.parse_nutrients_to_ingredient_fields(food_info["nutrients"])
             for nutrient_name in nutrient_fields:
                 if nutrient_name.endswith("_unit"):
                     continue
-                val = nutrient_fields[nutrient_name] / 100  # convert from "per 100g" to "per 1g" of food/ingredient
+                val = nutrient_fields[nutrient_name] / 100  # convert from "per 100g" to "per 1g"
                 setattr(ing, nutrient_name, val)
-            if isinstance(ingredient["amount"], dict):
-                ingredient["amount"] = ingredient["amount"]["max"]
-            setattr(ing, "amount", ingredient["amount"])
-            setattr(ing, "unit", ingredient["unit"])
-            setattr(ing, "notes", ingredient["notes"])
-            # ing.describe()
+            # Handle range amounts (take max)
+            amount = ingredient["amount"]
+            if isinstance(amount, dict):
+                amount = amount["max"]
+            # Store original amount/unit for recipe readability
+            unit = ingredient["unit"]
+            ing.amount = amount
+            ing.unit = unit
+            ing.notes = ingredient["notes"]
+            # Convert amount to grams for nutrient calculations
+            try:
+                print(ingredient)
+                if unit:
+                    ing.amount_grams = usda.convert_amount_to_grams(amount, unit, food_info["portions"])
+            except ValueError as e:
+                print(f"Warning: {e}. Gram conversion not available.")
+                ing.amount_grams = None
             ingredients_list.append(ing)
         return ingredients_list

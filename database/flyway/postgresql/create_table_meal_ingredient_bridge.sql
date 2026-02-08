@@ -3,6 +3,7 @@ CREATE TABLE meal_ingredient_bridge (
     ingredient_id INT NOT NULL,
     quantity DECIMAL NOT NULL,
     unit TEXT,
+    quantity_grams DECIMAL,
     PRIMARY KEY (meal_id, ingredient_id),
     FOREIGN KEY (meal_id) REFERENCES meals(id) ON DELETE RESTRICT,
     FOREIGN KEY (ingredient_id) REFERENCES ingredients(id) ON DELETE RESTRICT

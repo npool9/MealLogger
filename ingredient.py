@@ -26,6 +26,7 @@ class Ingredient(object):
         # Transient fields (not stored in ingredients table, used for bridge table)
         amount=None,
         unit=None,
+        amount_grams=None,
         notes=None
     ):
         self._id = id
@@ -49,6 +50,7 @@ class Ingredient(object):
         # Transient fields
         self.amount = amount
         self.unit = unit
+        self.amount_grams = amount_grams
         self.notes = notes
 
     @property
