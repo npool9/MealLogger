@@ -162,7 +162,10 @@ class IngredientEditor(QDialog):
             amount = ""
 
         ing.update({
-            "amount": amount,
+            "amount": {
+                    "max": max([float(a) for a in amount.split('–')]),
+                    "min": min([float(a) for a in amount.split('–')])
+            },
             "unit": unit or None,
             "name": name,
             "subsection": section or None,

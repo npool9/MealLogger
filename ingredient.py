@@ -22,7 +22,11 @@ class Ingredient(object):
         iron_per_gram=None,
         vitamin_a_per_gram=None,
         vitamin_c_per_gram=None,
-        vitamin_d_per_gram=None
+        vitamin_d_per_gram=None,
+        # Transient fields (not stored in ingredients table, used for bridge table)
+        amount=None,
+        unit=None,
+        notes=None
     ):
         self._id = id
         self._name = name
@@ -42,6 +46,10 @@ class Ingredient(object):
         self._vitamin_a_per_gram = vitamin_a_per_gram
         self._vitamin_c_per_gram = vitamin_c_per_gram
         self._vitamin_d_per_gram = vitamin_d_per_gram
+        # Transient fields
+        self.amount = amount
+        self.unit = unit
+        self.notes = notes
 
     @property
     def id(self):

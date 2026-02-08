@@ -19,11 +19,19 @@ class MealRepository:
         created_at = datetime.datetime.now()
         insert_statement = """
             INSERT INTO meals (name, description, servings, serving_size, serving_unit, recipe_url, created_at)
-            VALUES (\'{}\', \'{}\', \'{}\', {}, \'{}\', \'{}\', \'{}\')
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             RETURNING id
-            """.format(meal.name, meal.description, meal.servings, meal.serving_size, meal.serving_unit,
-                       meal.recipe_url, created_at)
-        row_id = self.db_conn.execute_statement(insert_statement)
+        """
+        params = (
+            meal.name,
+            meal.description,
+            meal.servings,
+            meal.serving_size,
+            meal.serving_unit,
+            meal.recipe_url,
+            created_at
+        )
+        row_id = self.db_conn.execute_statement(insert_statement, params)
         meal.id = row_id
         meal.created_at = created_at
         return meal

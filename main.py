@@ -38,6 +38,9 @@ def run():
         print("Inserting ingredients into database...")
         for ingredient in ingredient_list:
             meal_logger._model.insert_ingredient(ingredient)
+        print("Inserting into meal-ingredient bridge...")
+        for ingredient in ingredient_list:
+            meal_logger._model.insert_meal_ingredient_bridge(meal, ingredient)
     else:  # meal exists
         print("Meal exists")
         pass

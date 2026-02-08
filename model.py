@@ -1,5 +1,6 @@
 from meal import Meal
 from ingredient import Ingredient
+from meal_ingredient_repository import MealIngredientRepository
 from usda_service import USDAService
 from meal_repository import MealRepository
 from ingredient_repository import IngredientRepository
@@ -90,6 +91,14 @@ class Model:
         """
         IngredientRepository(self._db_util).insert(ingredient)
 
+    def insert_meal_ingredient_bridge(self, meal, ingredient):
+        """
+        Insert the meal ingredient bridge into the database
+        :param meal: the meal object
+        :param ingredient: the ingredient object
+        """
+        MealIngredientRepository(self._db_util).insert(meal, ingredient)
+
     def process_ingredients(self, ingredient_list: list):
         """
         Loop through the ingredients in the list, create ingredient objects, insert them into the database
@@ -105,9 +114,12 @@ class Model:
         For each parsed ingredient, search the USDA FoodData Central database,
         retrieve nutrient values, convert them to per-gram amounts, and
         populate an Ingredient object.
-
         :param ingredients: Parsed ingredient dicts, each containing:
+            - original
+            - amount
+            - unit
             - name: ingredient name to search for
+            - notes
             - ingredient_type: 'foundation' or 'branded'
         :return: List of Ingredient objects with nutrient fields populated
         """
@@ -126,6 +138,11 @@ class Model:
                     continue
                 val = nutrient_fields[nutrient_name] / 100  # convert from "per 100g" to "per 1g" of food/ingredient
                 setattr(ing, nutrient_name, val)
+            if isinstance(ingredient["amount"], dict):
+                ingredient["amount"] = ingredient["amount"]["max"]
+            setattr(ing, "amount", ingredient["amount"])
+            setattr(ing, "unit", ingredient["unit"])
+            setattr(ing, "notes", ingredient["notes"])
             # ing.describe()
             ingredients_list.append(ing)
         return ingredients_list

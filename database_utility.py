@@ -72,9 +72,12 @@ class DatabaseUtility:
         :param params: optional tuple of parameters for parameterized queries
         """
         self.cur.execute(statement, params)
-        row_id = self.cur.fetchone()[0]
-        self.conn.commit()
-        return row_id
+        if statement.lower().strip().startswith("insert"):
+            row_id = self.cur.fetchone()[0]
+            self.conn.commit()
+            return row_id
+        elif statement.lower().strip().startswith("select"):
+            return self.cur.fetchall()
 
     def get_row_id(self, table_name: str, column_name: str, value: str, id_col="id"):
         """
