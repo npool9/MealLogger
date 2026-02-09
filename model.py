@@ -146,9 +146,10 @@ class Model:
             ing.notes = ingredient["notes"]
             # Convert amount to grams for nutrient calculations
             try:
-                print(ingredient)
                 if unit:
-                    ing.amount_grams = usda.convert_amount_to_grams(amount, unit, food_info["portions"])
+                    ing.amount_grams = usda.convert_amount_to_grams(
+                        amount, unit, food_info["portions"], ingredient_name=ingredient["name"]
+                    )
             except ValueError as e:
                 print(f"Warning: {e}. Gram conversion not available.")
                 ing.amount_grams = None
