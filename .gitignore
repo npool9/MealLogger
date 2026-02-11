@@ -6,3 +6,5 @@ __pycache__/*
 opennutrition*
 api_keys.json
 CLAUDE.md
+usda_cups*
+.claude/*
