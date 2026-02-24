@@ -1,0 +1,23 @@
+CREATE TABLE meal_log (
+    id SERIAL PRIMARY KEY,
+    meal_id INT NOT NULL REFERENCES meals(id) ON DELETE RESTRICT,
+    date_eaten DATE NOT NULL,
+    servings_consumed DECIMAL DEFAULT 1,
+    calories DECIMAL,
+    protein DECIMAL,
+    carbs DECIMAL,
+    fat DECIMAL,
+    fiber DECIMAL,
+    sugar DECIMAL,
+    saturated_fat DECIMAL,
+    trans_fat DECIMAL,
+    cholesterol DECIMAL,
+    sodium DECIMAL,
+    potassium DECIMAL,
+    calcium DECIMAL,
+    iron DECIMAL,
+    vitamin_a DECIMAL,
+    vitamin_c DECIMAL,
+    vitamin_d DECIMAL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
