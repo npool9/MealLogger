@@ -1,12 +1,15 @@
 from meal import Meal
+from meal_log import MealLog
 from ingredient import Ingredient
 from meal_ingredient_repository import MealIngredientRepository
+from meal_log_repository import MealLogRepository
 from usda_service import USDAService
 from meal_repository import MealRepository
 from ingredient_repository import IngredientRepository
 from database_utility import DatabaseUtility
 from fitmencook_search import FitMenCook
 from flyway import Flyway
+from datetime import date
 import json
 import os
 
@@ -164,3 +167,45 @@ class Model:
             print("Amount:", ing.amount)
             print("Unit:", ing.unit)
         return ingredients_list
+
+    def log_macros(self, meal, ingredients, servings_consumed=1, date_eaten=None):
+        """
+        Log a meal's macros to the meal_log table.
+        Calculates total macros from ingredients and stores them.
+
+        :param meal: Meal object (must have id set)
+        :param ingredients: list of Ingredient objects with amount_grams set
+        :param servings_consumed: number of servings eaten (default 1)
+        :param date_eaten: date the meal was eaten (default today)
+        :return: MealLog object with id set
+        """
+        if date_eaten is None:
+            date_eaten = date.today()
+        # Calculate totals from ingredients
+        nutrients = [
+            "calories", "protein", "carbs", "fat", "fiber", "sugar",
+            "saturated_fat", "trans_fat", "cholesterol", "sodium",
+            "potassium", "calcium", "iron", "vitamin_a", "vitamin_c", "vitamin_d"
+        ]
+        totals = {n: 0 for n in nutrients}
+        for ing in ingredients:
+            if ing.amount_grams is None:
+                continue
+            grams = ing.amount_grams
+            for nutrient in nutrients:
+                per_gram = getattr(ing, f"{nutrient}_per_gram", None)
+                if per_gram:
+                    totals[nutrient] += per_gram * grams
+        # Scale by servings consumed
+        for key in totals:
+            totals[key] = round(totals[key] * servings_consumed, 2)
+        # Create and insert meal log
+        meal_log = MealLog(
+            meal_id=meal.id,
+            date_eaten=date_eaten,
+            servings_consumed=servings_consumed,
+            **totals
+        )
+        meal_log_repo = MealLogRepository(self._db_util)
+        meal_log_repo.insert(meal_log)
+        return meal_log
