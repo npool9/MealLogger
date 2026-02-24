@@ -42,7 +42,7 @@ def run():
         for ingredient in ingredient_list:
             meal_logger._model.insert_meal_ingredient_bridge(meal, ingredient)
         print("Calculating macros and inserting into meal_log...")
-            meal_logger._model.log_macros(meal, ingredient_list)
+        meal_logger._model.log_macros(meal, ingredient_list, servings_consumed=1)
     else:  # meal exists
         print("Meal exists")
         pass
