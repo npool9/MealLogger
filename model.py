@@ -126,7 +126,8 @@ class Model:
         usda = USDAService()
         ingredients_list = []
         for ingredient in ingredients:
-            food_info = usda.search_food(ingredient["name"], food_type=ingredient["ingredient_type"])
+            food_info = usda.search_food(ingredient["name"], food_type=ingredient["ingredient_type"], target_unit=ingredient.get("unit"))
+            print(food_info["portions"])
             ing = Ingredient(name=food_info["name"].title())
             # Parse nutrient fields and convert to per-gram values
             nutrient_fields = usda.parse_nutrients_to_ingredient_fields(food_info["nutrients"])
@@ -141,6 +142,11 @@ class Model:
                 amount = amount["max"]
             # Store original amount/unit for recipe readability
             unit = ingredient["unit"]
+            # If unit is None, infer from portions data
+            if unit is None and amount and food_info["portions"]:
+                available_units = list(food_info["portions"].keys())
+                if available_units:
+                    unit = available_units[0]
             ing.amount = amount
             ing.unit = unit
             ing.notes = ingredient["notes"]
@@ -148,10 +154,13 @@ class Model:
             try:
                 if unit:
                     ing.amount_grams = usda.convert_amount_to_grams(
-                        amount, unit, food_info["portions"], ingredient_name=ingredient["name"]
+                        amount, unit, food_info["portions"], ingredient_name=food_info["name"]
                     )
             except ValueError as e:
                 print(f"Warning: {e}. Gram conversion not available.")
                 ing.amount_grams = None
             ingredients_list.append(ing)
+            print("Amount Grams:", ing.amount_grams)
+            print("Amount:", ing.amount)
+            print("Unit:", ing.unit)
         return ingredients_list

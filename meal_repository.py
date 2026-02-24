@@ -1,7 +1,6 @@
 from database_utility import DatabaseUtility
 from meal import Meal
 import datetime
-import time
 
 
 class MealRepository:

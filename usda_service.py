@@ -2,6 +2,108 @@ import json
 import re
 import requests
 
+# Mass units (already in weight, no volume conversion needed)
+MASS_UNITS = {
+    "g", "gram", "grams",
+    "kg", "kilogram", "kilograms",
+    "mg", "milligram", "milligrams",
+    "oz", "ounce", "ounces", "onz",
+    "lb", "lbs", "pound", "pounds",
+}
+
+# Volume unit conversions to cups
+# Maps unit names (and abbreviations) to their equivalent in cups
+# 1 cup = 240ml (US customary)
+VOLUME_TO_CUPS = {
+    # Cups
+    "cup": 1.0,
+    "cups": 1.0,
+    "c": 1.0,
+    "c.": 1.0,
+    # Tablespoons (16 tbsp = 1 cup)
+    "tablespoon": 1 / 16,
+    "tablespoons": 1 / 16,
+    "tbsp": 1 / 16,
+    "tbsp.": 1 / 16,
+    "tbs": 1 / 16,
+    "tbs.": 1 / 16,
+    "tbl": 1 / 16,
+    "tbl.": 1 / 16,
+    "tb": 1 / 16,
+    "t": 1 / 16,
+    # Note: sometimes "t" means teaspoon - context dependent
+    # Teaspoons (48 tsp = 1 cup, or 3 tsp = 1 tbsp)
+    "teaspoon": 1 / 48,
+    "teaspoons": 1 / 48,
+    "tsp": 1 / 48,
+    "tsp.": 1 / 48,
+    "ts": 1 / 48,
+    "ts.": 1 / 48,
+    # Fluid ounces (8 fl oz = 1 cup)
+    "fluid ounce": 1 / 8,
+    "fluid ounces": 1 / 8,
+    "fl oz": 1 / 8,
+    "fl. oz": 1 / 8,
+    "fl. oz.": 1 / 8,
+    "floz": 1 / 8,
+    "fl-oz": 1 / 8,
+    "fluid oz": 1 / 8,
+    "fluid oz.": 1 / 8,
+    # Milliliters (240ml = 1 cup)
+    "milliliter": 1 / 240,
+    "milliliters": 1 / 240,
+    "millilitre": 1 / 240,
+    "millilitres": 1 / 240,
+    "ml": 1 / 240,
+    "ml.": 1 / 240,
+    "cc": 1 / 240,
+    # cubic centimeter = 1ml
+    # Liters (1L = ~4.227 cups)
+    "liter": 4.227,
+    "liters": 4.227,
+    "litre": 4.227,
+    "litres": 4.227,
+    "l": 4.227,
+    "l.": 4.227,
+    # Deciliters (1dl = 100ml = 0.4227 cups)
+    "deciliter": 0.4227,
+    "deciliters": 0.4227,
+    "decilitre": 0.4227,
+    "decilitres": 0.4227,
+    "dl": 0.4227,
+    "dl.": 0.4227,
+    # Pints (1 pint = 2 cups)
+    "pint": 2.0,
+    "pints": 2.0,
+    "pt": 2.0,
+    "pt.": 2.0,
+    # Quarts (1 quart = 4 cups)
+    "quart": 4.0,
+    "quarts": 4.0,
+    "qt": 4.0,
+    "qt.": 4.0,
+    "qts": 4.0,
+    # Gallons (1 gallon = 16 cups)
+    "gallon": 16.0,
+    "gallons": 16.0,
+    "gal": 16.0,
+    "gal.": 16.0,
+    "gals": 16.0,
+    # Drops (approximate: ~60 drops = 1 tsp, so 2880 drops = 1 cup)
+    "drop": 1 / 2880,
+    "drops": 1 / 2880,
+    # Dashes (approximate: ~8 dashes = 1 tsp)
+    "dash": 1 / 384,
+    "dashes": 1 / 384,
+    # Pinches (approximate: ~16 pinches = 1 tsp)
+    "pinch": 1 / 768,
+    "pinches": 1 / 768,
+    # Smidgens (approximate: ~32 smidgens = 1 tsp)
+    "smidgen": 1 / 1536,
+    "smidgens": 1 / 1536,
+    "smidge": 1 / 1536,
+}
+
 # Unit conversion multipliers: (from_unit, to_unit) -> multiplier
 UNIT_CONVERSIONS = {
     ("G", "MG"): 1000,
@@ -58,11 +160,10 @@ FNDDS_PORTION_CODES = {
 }
 
 # Pattern to extract amount and unit from portion descriptions
-# Matches: "1 cup", "1/4 cup", "0.5 clove", "3 large slices", "1 medium (2-3/4\" dia)"
+# Matches: "1 cup", "1/4 cup", "0.5 clove", "1 flour tortilla", "1 medium (2-3/4\" dia)"
 PORTION_PATTERN = re.compile(
     r'^(\d+(?:/\d+)?(?:\.\d+)?)\s+'  # amount (required)
-    r'(?:small|medium|large|extra large|extra-large)?\s*'  # optional size modifier
-    r'([a-zA-Z][a-zA-Z\s]*?)(?:\s|$|,|\()',  # unit name (letters, capture until space/comma/paren)
+    r'([^(,]+)',  # unit name (everything until paren or comma)
     re.IGNORECASE
 )
 
@@ -81,16 +182,13 @@ def normalize_unit(unit: str) -> str:
     E.g., 'cups' -> 'cup', 'cloves' -> 'clove', 'slices' -> 'slice'
     """
     unit = unit.lower().strip()
-
     # Specific irregular plurals (ves -> f only for these known words)
     ves_to_f = {'loaves': 'loaf', 'leaves': 'leaf', 'halves': 'half', 'knives': 'knife', 'shelves': 'shelf'}
     if unit in ves_to_f:
         return ves_to_f[unit]
-
     # ies -> y (berries -> berry)
     if unit.endswith('ies') and len(unit) > 3:
         return unit[:-3] + 'y'
-
     # es ending - only remove 'es' for sibilant endings (dishes, boxes, buzzes)
     if unit.endswith('es') and len(unit) > 3:
         stem = unit[:-2]
@@ -98,11 +196,9 @@ def normalize_unit(unit: str) -> str:
             return stem
         # Otherwise just remove 's' (e.g., "slices" -> "slice", "cloves" -> "clove")
         return unit[:-1]
-
     # Regular 's' ending
     if unit.endswith('s') and len(unit) > 2:
         return unit[:-1]
-
     return unit
 
 
@@ -115,10 +211,19 @@ class USDAService:
         """
         Initialize
         """
-        self.api_key = json.load(open("api_keys.json", 'r'))["usda"]
+        api_keys = json.load(open("api_keys.json", 'r'))
+        self.api_key = api_keys["usda"]
+        self.anthropic_api_key = api_keys.get("anthropic")
         self.base_url = "https://api.nal.usda.gov/fdc/v1"
         self.food_search_endpoint = "/foods/search"
         self.food_details_endpoint = "/food"
+        # Load grams-per-cup cache
+        self.grams_cache_file = "grams_per_cup_cache.json"
+        try:
+            with open(self.grams_cache_file, 'r') as f:
+                self.grams_cache = json.load(f)
+        except FileNotFoundError:
+            self.grams_cache = {}
 
     def get_food_portions(self, fdc_id: int) -> dict:
         """
@@ -209,9 +314,9 @@ class USDAService:
                 if portion.get("modifier"):
                     mod_value = str(portion["modifier"])
                     # Check if it's an FNDDS numeric code
-                    if mod_value.isdigit() and mod_value in FNDDS_PORTION_CODES:
+                    if mod_value.isdigit():
                         # Parse the FNDDS code description for unit if we don't have one
-                        desc = FNDDS_PORTION_CODES[mod_value].lower()
+                        desc = portion["portionDescription"]
                         match = PORTION_PATTERN.match(desc)
                         if match:
                             if not unit:
@@ -239,7 +344,7 @@ class USDAService:
                         except:
                             pass
 
-                if unit and unit != "undetermined":
+                if unit and unit != "undetermined" and unit not in MASS_UNITS:
                     grams_per_unit = round(gram_weight / amount, 2)
                     add_portion(unit, modifier, grams_per_unit)
 
@@ -255,7 +360,7 @@ class USDAService:
                         try:
                             amount = parse_portion_amount(match.group(1))
                             unit = normalize_unit(match.group(2))
-                            if unit and amount > 0:
+                            if unit and amount > 0 and unit not in MASS_UNITS:
                                 grams_per_unit = round(gram_weight / amount, 2)
                                 add_portion(unit, "", grams_per_unit)
                         except:
@@ -273,19 +378,40 @@ class USDAService:
                     try:
                         amount = parse_portion_amount(match.group(1))
                         unit = normalize_unit(match.group(2))
-                        if unit and amount > 0:
+                        if unit and amount > 0 and unit not in MASS_UNITS:
                             grams_per_unit = round(mass_serving_size / amount, 2)
                             add_portion(unit, "", grams_per_unit)
                     except:
                         pass
+            portions = self.post_process_portions(portions)
 
         return portions
 
-    def search_food(self, food_keywords: str, food_type: str="foundation"):
+    def post_process_portions(self, portions):
+        """
+        Derive a cup conversion from other volume units if cup isn't already present.
+        :param portions: portions dict (should not contain mass units)
+        :return: portions dict, possibly with cup entry added
+        """
+        if "cup" in portions:
+            return portions
+        # Derive cups from other volume units (e.g., tablespoon -> cup)
+        for unit in list(portions.keys()):
+            if unit in VOLUME_TO_CUPS:
+                for modifier, grams_per_unit in portions[unit].items():
+                    cups_factor = VOLUME_TO_CUPS[unit]
+                    grams_per_cup = grams_per_unit / cups_factor
+                    if "cup" not in portions:
+                        portions["cup"] = {}
+                    portions["cup"][modifier] = grams_per_cup
+        return portions
+
+    def search_food(self, food_keywords: str, food_type: str="foundation", target_unit: str=None):
         """
         Search for food nutrient information and portion data by keyword(s).
         :param food_keywords: the keywords to search for food in USDA database
         :param food_type: foundation, sr_legacy, or branded
+        :param target_unit: reserved for future use (e.g., grams to volume conversion)
         :return: dict with 'nutrients' and 'portions' keys
         """
         food_keywords = food_keywords.replace(' ', "%20")
@@ -297,12 +423,18 @@ class USDAService:
             url = f"{self.base_url}{self.food_search_endpoint}?query={food_keywords}&dataType=SR%20Legacy&api_key={self.api_key}"
         else:
             raise Exception(f"Invalid food type: {food_type} not in [branded, foundation, sr_legacy]")
-        print("USDA URL:", url)
         r = requests.get(url)
         if r.status_code != 200:
             raise Exception(f"Couldn't get food search response for \"{food_keywords}\"")
         r = r.json()
-        food_info = r["foods"][0]
+        foods = r["foods"]
+
+        # Use first result
+        food_info = foods[0]
+        portions = self.get_food_portion_conversions(food_info["fdcId"]) if "fdcId" in food_info else {}
+
+        print(f"USDA: {url} -> {food_info['description']} (fdcId: {food_info.get('fdcId')})")
+
         # Extract nutrients
         nutrients = food_info["foodNutrients"]
         keys_to_remove = ["nutrientId", "nutrientNumber", "derivationCode", "derivationDescription", "derivationId",
@@ -311,10 +443,6 @@ class USDAService:
         for nut in nutrients:
             for key in keys_to_remove:
                 nut.pop(key, None)
-        # Get portion conversions using the thorough extraction method
-        portions = {}
-        if "fdcId" in food_info:
-            portions = self.get_food_portion_conversions(food_info["fdcId"])
 
         return {
             "name": food_info["description"],
@@ -390,6 +518,101 @@ class USDAService:
             result[field_name] = value
         return result
 
+    def estimate_grams_per_cup(self, ingredient_name: str) -> float | None:
+        """
+        Use Claude to estimate grams per cup for an ingredient.
+        Results are cached to avoid repeated API calls.
+
+        :param ingredient_name: name of the ingredient
+        :return: estimated grams per cup, or None if failed
+        """
+        # Check cache first
+        cache_key = ingredient_name.lower().strip()
+        if cache_key in self.grams_cache:
+            print(f"[CACHE] {ingredient_name}: {self.grams_cache[cache_key]}g/cup")
+            return self.grams_cache[cache_key]
+
+        if not self.anthropic_api_key:
+            print("Anthropic API key not set")
+            return None
+        url = "https://api.anthropic.com/v1/messages"
+        prompt = f"How many grams is 1 cup of {ingredient_name}? Reply with just the number, nothing else."
+        headers = {
+            "x-api-key": self.anthropic_api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        }
+        payload = {
+            "model": "claude-3-haiku-20240307",
+            "max_tokens": 50,
+            "messages": [{"role": "user", "content": prompt}]
+        }
+
+        try:
+            print(f"[CLAUDE API] Querying: {ingredient_name}...")
+            r = requests.post(url, headers=headers, json=payload)
+            if r.status_code != 200:
+                print(f"Claude API error: {r.status_code} - {r.text}")
+                return None
+            response = r.json()
+            text = response["content"][0]["text"].strip()
+            grams = float(text)
+            # Save to cache
+            self.grams_cache[cache_key] = grams
+            with open(self.grams_cache_file, 'w') as f:
+                json.dump(self.grams_cache, f, indent=2)
+            print(f"[CLAUDE API] Result: {grams}g/cup (saved to cache)")
+            return grams
+        except Exception as e:
+            print(f"Claude parsing error: {e}")
+            return None
+
+    def convert_amount_to_grams(self, amount: float, unit: str, portions: dict, ingredient_name: str = None) -> float:
+        """
+        TODO: modifier is not supported yet
+        Convert an ingredient amount to grams.
+
+        :param amount: numeric amount (e.g., 2 for "2 cups")
+        :param unit: unit string (e.g., "cup", "tbsp", "oz")
+        :param portions: portion data from get_food_portion_conversions()
+                         Structure: {"cup": {"": 120, "sifted": 85}, "tablespoon": {"": 7.5}}
+        :return: amount in grams
+        :raises ValueError: if no conversion found
+        """
+        # Weight unit mappings to grams
+        WEIGHT_TO_GRAMS = {
+            "g": 1.0, "gram": 1.0, "grams": 1.0,
+            "kg": 1000.0, "kilogram": 1000.0, "kilograms": 1000.0,
+            "mg": 0.001, "milligram": 0.001, "milligrams": 0.001,
+            "oz": 28.3495, "ounce": 28.3495, "ounces": 28.3495, "onz": 28.3495,
+            "lb": 453.592, "lbs": 453.592, "pound": 453.592, "pounds": 453.592,
+        }
+        unit_lower = unit.lower().strip()
+        normalized = normalize_unit(unit_lower)
+        # 1. Direct weight conversion
+        if unit_lower in WEIGHT_TO_GRAMS:
+            return amount * WEIGHT_TO_GRAMS[unit_lower]
+        # 2. Lookup in portions dict
+        if portions and normalized in portions:
+            modifiers = portions[normalized]
+            grams_per_unit = modifiers.get("", next(iter(modifiers.values())))
+            return amount * grams_per_unit
+        # 3. Derive from another volume unit via cups
+        if normalized in VOLUME_TO_CUPS or unit_lower in VOLUME_TO_CUPS:
+            requested_cups_factor = VOLUME_TO_CUPS.get(normalized) or VOLUME_TO_CUPS.get(unit_lower)
+            if portions:
+                for portion_unit, modifiers in portions.items():
+                    if portion_unit in VOLUME_TO_CUPS:
+                        portion_cups_factor = VOLUME_TO_CUPS[portion_unit]
+                        grams_per_portion_unit = modifiers.get("", next(iter(modifiers.values())))
+                        grams_per_cup = grams_per_portion_unit / portion_cups_factor
+                        return amount * requested_cups_factor * grams_per_cup
+            # 4. Estimate using Claude as last resort for volume units
+            if ingredient_name:
+                grams_per_cup = self.estimate_grams_per_cup(ingredient_name)
+                if grams_per_cup:
+                    return amount * requested_cups_factor * grams_per_cup
+        raise ValueError(f"Cannot convert '{amount} {unit}' to grams: no conversion found")
 
 if __name__ == "__main__":
     usda_service = USDAService()
