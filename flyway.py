@@ -1,4 +1,5 @@
 import psycopg2
+from psycopg2 import sql
 import os
 from database_utility import DatabaseUtility
 
@@ -15,7 +16,6 @@ class Flyway:
         self.flyway_path = os.path.join(os.path.dirname(__file__), "database", "flyway", db_type)
         self.db_utility = DatabaseUtility()
         self.credentials = self.db_utility.get_credentials()
-        self.credentials["password"] = input(f"Please enter your database password for {self.credentials['user']}:")
         try:
             # Connect to the default 'postgres' database to create a new one
             self.conn = psycopg2.connect(
@@ -36,17 +36,17 @@ class Flyway:
         :param db_name: name of new database
         """
         self.conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-        self.cur.execute("SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{}'".format(db_name))
+        self.cur.execute("SELECT 1 FROM pg_catalog.pg_database WHERE datname = %s", (db_name,))
         try:
             exists = self.cur.fetchone()
             if not exists:
-                self.cur.execute("CREATE DATABASE \"{}\"".format(db_name))
+                self.cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
                 self.conn.commit()
             else:
                 print(f"{db_name} already exists.")
         except psycopg2.ProgrammingError:
             try:
-                self.cur.execute("CREATE DATABASE \"{}\"".format(db_name))
+                self.cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
                 self.conn.commit()
             except psycopg2.errors.DuplicateDatabase:
                 print(f"{db_name} already exists.")

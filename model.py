@@ -47,8 +47,8 @@ class Model:
         :param meal_name; the name of the meal (str)
         :return: the meal object, exist flag
         """
-        query = "SELECT * FROM meals WHERE UPPER(name) = \'" + meal_name.upper() + "\';"
-        self._cursor.execute(query)
+        query = "SELECT * FROM meals WHERE UPPER(name) = %s"
+        self._cursor.execute(query, (meal_name.upper(),))
         row = self._cursor.fetchone()
         exists = True
         if not row:  # meal does not exist

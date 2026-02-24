@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 import psycopg2
+from psycopg2 import sql
 import os
 
 
@@ -31,6 +32,7 @@ class DatabaseUtility:
                 credentials[param[0]] = param[1]
         else:
             raise Exception('Section {0} not found in the {1} file'.format(self._config_section, self._database_ini))
+        credentials["password"] = input(f"Please enter your database password for {credentials['user']}: ")
         return credentials
 
     def connect(self, credentials):
@@ -41,13 +43,12 @@ class DatabaseUtility:
         """
         try:
             print('Connecting to the PostgreSQL database...')
-            password = input(f"Please enter your database password for {credentials['user']}:")
             self.conn = psycopg2.connect(
                 host=credentials["host"],
                 user=credentials["user"],
-                password=password,
+                password=credentials["password"],
                 dbname=credentials["app_db"],
-                port=credentials["port"]  # Connect to a default database to create others
+                port=credentials["port"]
             )
             self.cur = self.conn.cursor()
             self.cur.execute('SELECT version()')
@@ -87,9 +88,11 @@ class DatabaseUtility:
         :param value: the value of the column name for the where clause
         :param id_col: the name of the id column
         """
-        query = f"select * from {table_name} where {column_name} = \'{value}\';"
-        print(query)
-        self.cur.execute(query)
+        query = sql.SQL("SELECT * FROM {} WHERE {} = %s").format(
+            sql.Identifier(table_name),
+            sql.Identifier(column_name)
+        )
+        self.cur.execute(query, (value,))
         self.conn.commit()
         res = self.cur.fetchone()
         return res[id_col]
