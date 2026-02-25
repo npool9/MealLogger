@@ -9,13 +9,14 @@ class Flyway:
     Scripts for executing flyway on a database
     """
 
-    def  __init__(self, db_type="postgresql"):
+    def  __init__(self, credentials=None, db_type="postgresql"):
         """
         Initialize
+        :param credentials: optional pre-loaded credentials dict (avoids re-prompting for password)
         """
         self.flyway_path = os.path.join(os.path.dirname(__file__), "database", "flyway", db_type)
         self.db_utility = DatabaseUtility()
-        self.credentials = self.db_utility.get_credentials()
+        self.credentials = credentials or self.db_utility.get_credentials()
         try:
             # Connect to the default 'postgres' database to create a new one
             self.conn = psycopg2.connect(

@@ -21,10 +21,10 @@ class IngredientRepository:
         """
         params = (
             ingredient.name,
-            ingredient.calories_per_gram,
-            ingredient.protein_per_gram,
-            ingredient.carbs_per_gram,
-            ingredient.fat_per_gram,
+            ingredient.calories_per_gram or 0,
+            ingredient.protein_per_gram or 0,
+            ingredient.carbs_per_gram or 0,
+            ingredient.fat_per_gram or 0,
             ingredient.fiber_per_gram,
             ingredient.sugar_per_gram,
             ingredient.saturated_fat_per_gram,

@@ -1,4 +1,5 @@
 import json
+import re
 import requests
 from bs4 import BeautifulSoup
 from ingredient_parser import parse_ingredient
@@ -20,16 +21,30 @@ class RecipeParser:
             'slice': 'slice', 'slices': 'slice',
         }
 
-    def get_recipe_jsonld(self, url):
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, 'html.parser')
+    def fetch_page(self, url):
+        """
+        Fetch a URL and return a BeautifulSoup object.
+        :param url: the url to fetch
+        :return: BeautifulSoup object
+        """
+        response = requests.get(url, timeout=15)
+        response.raise_for_status()
+        return BeautifulSoup(response.text, 'html.parser')
+
+    def get_recipe_jsonld(self, url, soup=None):
+        """
+        Extract Recipe JSON-LD structured data from a page.
+        :param url: the url to the recipe (used if soup is not provided)
+        :param soup: optional pre-fetched BeautifulSoup object
+        :return: dict with Recipe JSON-LD data, or None
+        """
+        if soup is None:
+            soup = self.fetch_page(url)
         for script in soup.find_all('script', type='application/ld+json'):
             try:
                 data = json.loads(script.string)
-                # JSON-LD can be a single object or a list
                 items = data if isinstance(data, list) else [data]
                 for item in items:
-                    # Check for Recipe type (could be nested in @graph)
                     if item.get('@type') == 'Recipe':
                         return item
                     if '@graph' in item:
@@ -40,6 +55,41 @@ class RecipeParser:
                 continue
         return None
 
+    def extract_ingredients_from_html(self, soup):
+        """
+        Extract ingredient strings from HTML when JSON-LD is missing or empty.
+        Handles both V1 (fmc_ingredients ul li) and V2 (li.fmc_ing_item span.ing-text) formats.
+        :param soup: BeautifulSoup object of the recipe page
+        :return: list of ingredient strings, or empty list
+        """
+        ingredients = []
+
+        # V2 format: li.fmc_ing_item with span.ing-text
+        v2_items = soup.find_all('li', class_='fmc_ing_item')
+        if v2_items:
+            seen = set()
+            for li in v2_items:
+                span = li.find('span', class_='ing-text')
+                if span:
+                    text = re.sub(r'\s+', ' ', span.get_text(' ', strip=True)).strip()
+                    if text and text not in seen:
+                        seen.add(text)
+                        ingredients.append(text)
+            if ingredients:
+                return ingredients
+
+        # V1 format: div.fmc_ingredients > ul > li
+        ings_div = soup.find('div', class_='fmc_ingredients')
+        if ings_div:
+            for li in ings_div.find_all('li'):
+                if li.find_parent('li'):
+                    continue
+                text = re.sub(r'\s+', ' ', li.get_text(' ', strip=True)).strip()
+                if text:
+                    ingredients.append(text)
+
+        return ingredients
+
     def parse_ingredient_line(self, line):
         original = line.strip()
         parsed = parse_ingredient(original)
@@ -49,10 +99,13 @@ class RecipeParser:
         if parsed.amount:
             qty_min = parsed.amount[0].quantity
             qty_max = parsed.amount[0].quantity_max
-            if qty_min == qty_max:
-                amount = float(qty_min)
-            else:
-                amount = {"max": float(qty_max), "min": float(qty_min)}
+            try:
+                if qty_min == qty_max:
+                    amount = float(qty_min)
+                else:
+                    amount = {"max": float(qty_max), "min": float(qty_min)}
+            except (ValueError, TypeError):
+                amount = None
 
         # Extract and normalize unit
         unit = None
@@ -90,17 +143,32 @@ class RecipeParser:
             parsed_recipe.append(self.parse_ingredient_line(ing))
         return parsed_recipe
 
-    def parse_recipe_from_url(self, url):
+    def parse_recipe_from_url(self, url, soup=None):
         """
-        Parse recipe from URL
+        Parse recipe from URL. Tries JSON-LD first, falls back to HTML scraping.
         :param url: the url to the recipe
+        :param soup: optional pre-fetched BeautifulSoup object
         :return: list of dictionaries, parsed ingredients with original, amount, unit, name, and notes keys/values
         """
-        recipe = self.get_recipe_jsonld(url)
-        if "recipeIngredient" in recipe:
-            recipe = recipe["recipeIngredient"]
-        recipe = self.parse_recipe(recipe)
-        return recipe
+        if soup is None:
+            soup = self.fetch_page(url)
+
+        ingredient_lines = []
+
+        # Try JSON-LD first
+        recipe_data = self.get_recipe_jsonld(url, soup=soup)
+        if recipe_data and recipe_data.get("recipeIngredient"):
+            ingredient_lines = recipe_data["recipeIngredient"]
+
+        # Fall back to HTML scraping
+        if not ingredient_lines:
+            ingredient_lines = self.extract_ingredients_from_html(soup)
+
+        if not ingredient_lines:
+            print(f"Warning: No ingredients found for {url}")
+            return []
+
+        return self.parse_recipe(ingredient_lines)
 
 
 # ----------------------------- Example usage -----------------------------

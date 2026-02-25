@@ -37,7 +37,7 @@ class Model:
         """
         Run flyway step for database
         """
-        flyway = Flyway()
+        flyway = Flyway(credentials=self.creds)
         print(f"Creating database {self.creds['app_db']}...")
         flyway.create_database(self.creds["app_db"])
         for table in self._meal_table_order:
@@ -196,9 +196,10 @@ class Model:
                 per_gram = getattr(ing, f"{nutrient}_per_gram", None)
                 if per_gram:
                     totals[nutrient] += per_gram * grams
-        # Scale by servings consumed
+        # Scale to per-serving, then multiply by servings consumed
+        recipe_servings = float(meal.servings) if meal.servings else 1
         for key in totals:
-            totals[key] = round(totals[key] * servings_consumed, 2)
+            totals[key] = round((totals[key] / recipe_servings) * servings_consumed, 2)
         # Create and insert meal log
         meal_log = MealLog(
             meal_id=meal.id,

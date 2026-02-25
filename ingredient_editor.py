@@ -156,16 +156,23 @@ class IngredientEditor(QDialog):
         if not ok:
             return
 
-        if isinstance(amount, dict):
-            amount = f"{amount.get('min')}–{amount.get('max')}"
-        elif amount is None:
-            amount = ""
+        # Parse amount: only create a range if user explicitly entered one (e.g. "2–3")
+        parsed_amount = None
+        if amount:
+            if '–' in amount or '-' in amount:
+                parts = amount.replace('–', '-').split('-')
+                parsed_amount = {
+                    "min": min(float(a) for a in parts),
+                    "max": max(float(a) for a in parts)
+                }
+            else:
+                try:
+                    parsed_amount = float(amount)
+                except ValueError:
+                    parsed_amount = amount
 
         ing.update({
-            "amount": {
-                    "max": max([float(a) for a in amount.split('–')]),
-                    "min": min([float(a) for a in amount.split('–')])
-            },
+            "amount": parsed_amount,
             "unit": unit or None,
             "name": name,
             "subsection": section or None,
