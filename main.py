@@ -25,8 +25,9 @@ def run():
     if not exists:
         # Get list of ingredients from a website
         print("Meal does not exist")
-        print("Searching for meal info...")
-        meal, ingredient_list = meal_logger._model.scrape_meal(meal_name)
+        website = meal_logger._view.ask_for_website(meal_logger._model.supported_websites)
+        print(f"Searching {website} for meal info...")
+        meal, ingredient_list = meal_logger._model.scrape_meal(meal_name, website)
         print("Found ingredients list")
         # Send the parsed ingredients list to the view
         ingredient_list = meal_logger._view.finalize_ingredients(ingredient_list)

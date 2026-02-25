@@ -62,8 +62,60 @@ class FitMenCook(RecipeSearch):
         recipe_url = self.search_for_meal()
         meal.recipe_url = recipe_url
         meal.website_name = self._name
-        ingredients = self._rp.parse_recipe_from_url(recipe_url, soup=self._recipe_soup)
+
+        soup = self._recipe_soup or self._rp.fetch_page(recipe_url)
+        ingredient_lines = []
+
+        # Try JSON-LD first
+        recipe_data = self._rp.get_recipe_jsonld(recipe_url, soup=soup)
+        if recipe_data and recipe_data.get("recipeIngredient"):
+            ingredient_lines = recipe_data["recipeIngredient"]
+
+        # Fall back to FitMenCook-specific HTML scraping
+        if not ingredient_lines:
+            ingredient_lines = self._extract_ingredients_from_html(soup)
+
+        if not ingredient_lines:
+            print(f"Warning: No ingredients found for {recipe_url}")
+            return []
+
+        ingredients = self._rp.parse_recipe(ingredient_lines)
         print(ingredients)
+        return ingredients
+
+    def _extract_ingredients_from_html(self, soup):
+        """
+        Extract ingredient strings from FitMenCook HTML.
+        Handles V1 (fmc_ingredients ul li) and V2 (li.fmc_ing_item span.ing-text) formats.
+        :param soup: BeautifulSoup object of the recipe page
+        :return: list of ingredient strings, or empty list
+        """
+        ingredients = []
+
+        # V2 format: li.fmc_ing_item with span.ing-text
+        v2_items = soup.find_all('li', class_='fmc_ing_item')
+        if v2_items:
+            seen = set()
+            for li in v2_items:
+                span = li.find('span', class_='ing-text')
+                if span:
+                    text = re.sub(r'\s+', ' ', span.get_text(' ', strip=True)).strip()
+                    if text and text not in seen:
+                        seen.add(text)
+                        ingredients.append(text)
+            if ingredients:
+                return ingredients
+
+        # V1 format: div.fmc_ingredients > ul > li
+        ings_div = soup.find('div', class_='fmc_ingredients')
+        if ings_div:
+            for li in ings_div.find_all('li'):
+                if li.find_parent('li'):
+                    continue
+                text = re.sub(r'\s+', ' ', li.get_text(' ', strip=True)).strip()
+                if text:
+                    ingredients.append(text)
+
         return ingredients
 
     def get_recipe_steps(self, meal):

@@ -8,6 +8,7 @@ from meal_repository import MealRepository
 from ingredient_repository import IngredientRepository
 from database_utility import DatabaseUtility
 from fitmencook_search import FitMenCook
+from allrecipes_search import AllRecipes
 from flyway import Flyway
 from datetime import date
 import json
@@ -23,7 +24,7 @@ class Model:
         """
         Initialize
         """
-        self.supported_websites = ["fitmencook"]
+        self.supported_websites = ["fitmencook", "allrecipes"]
         # Open a database connection
         self._db_util = DatabaseUtility()
         self.creds = self._db_util.get_credentials()
@@ -60,17 +61,23 @@ class Model:
         meal = Meal(*row)
         return meal, exists
 
-    def scrape_meal(self, meal_name: str) -> tuple[Meal, list]:
+    def scrape_meal(self, meal_name: str, website: str) -> tuple[Meal, list]:
         """
         Scrape a recipe website for meal details and ingredients.
 
         :param meal_name: the name of the meal to search for
+        :param website: the website to search (e.g. 'fitmencook', 'allrecipes')
         :return: tuple of (populated Meal object, list of parsed ingredients)
         """
-        # TODO: Ask user for the website to search
-        print("Supported Websites:", self.supported_websites)
         meal = Meal(name=meal_name)
-        search = FitMenCook(meal)
+        scrapers = {
+            "fitmencook": FitMenCook,
+            "allrecipes": AllRecipes,
+        }
+        scraper_class = scrapers.get(website)
+        if not scraper_class:
+            raise ValueError(f"Unsupported website: {website}")
+        search = scraper_class(meal)
         print("Getting ingredients list...")
         ingredient_list = search.get_ingredients(meal)
         print("Getting recipe description...")

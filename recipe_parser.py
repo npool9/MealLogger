@@ -45,50 +45,17 @@ class RecipeParser:
                 data = json.loads(script.string)
                 items = data if isinstance(data, list) else [data]
                 for item in items:
-                    if item.get('@type') == 'Recipe':
+                    item_type = item.get('@type', [])
+                    if item_type == 'Recipe' or (isinstance(item_type, list) and 'Recipe' in item_type):
                         return item
                     if '@graph' in item:
                         for node in item['@graph']:
-                            if node.get('@type') == 'Recipe':
+                            node_type = node.get('@type', [])
+                            if node_type == 'Recipe' or (isinstance(node_type, list) and 'Recipe' in node_type):
                                 return node
             except json.JSONDecodeError:
                 continue
         return None
-
-    def extract_ingredients_from_html(self, soup):
-        """
-        Extract ingredient strings from HTML when JSON-LD is missing or empty.
-        Handles both V1 (fmc_ingredients ul li) and V2 (li.fmc_ing_item span.ing-text) formats.
-        :param soup: BeautifulSoup object of the recipe page
-        :return: list of ingredient strings, or empty list
-        """
-        ingredients = []
-
-        # V2 format: li.fmc_ing_item with span.ing-text
-        v2_items = soup.find_all('li', class_='fmc_ing_item')
-        if v2_items:
-            seen = set()
-            for li in v2_items:
-                span = li.find('span', class_='ing-text')
-                if span:
-                    text = re.sub(r'\s+', ' ', span.get_text(' ', strip=True)).strip()
-                    if text and text not in seen:
-                        seen.add(text)
-                        ingredients.append(text)
-            if ingredients:
-                return ingredients
-
-        # V1 format: div.fmc_ingredients > ul > li
-        ings_div = soup.find('div', class_='fmc_ingredients')
-        if ings_div:
-            for li in ings_div.find_all('li'):
-                if li.find_parent('li'):
-                    continue
-                text = re.sub(r'\s+', ' ', li.get_text(' ', strip=True)).strip()
-                if text:
-                    ingredients.append(text)
-
-        return ingredients
 
     def parse_ingredient_line(self, line):
         original = line.strip()
@@ -143,32 +110,6 @@ class RecipeParser:
             parsed_recipe.append(self.parse_ingredient_line(ing))
         return parsed_recipe
 
-    def parse_recipe_from_url(self, url, soup=None):
-        """
-        Parse recipe from URL. Tries JSON-LD first, falls back to HTML scraping.
-        :param url: the url to the recipe
-        :param soup: optional pre-fetched BeautifulSoup object
-        :return: list of dictionaries, parsed ingredients with original, amount, unit, name, and notes keys/values
-        """
-        if soup is None:
-            soup = self.fetch_page(url)
-
-        ingredient_lines = []
-
-        # Try JSON-LD first
-        recipe_data = self.get_recipe_jsonld(url, soup=soup)
-        if recipe_data and recipe_data.get("recipeIngredient"):
-            ingredient_lines = recipe_data["recipeIngredient"]
-
-        # Fall back to HTML scraping
-        if not ingredient_lines:
-            ingredient_lines = self.extract_ingredients_from_html(soup)
-
-        if not ingredient_lines:
-            print(f"Warning: No ingredients found for {url}")
-            return []
-
-        return self.parse_recipe(ingredient_lines)
 
 
 # ----------------------------- Example usage -----------------------------
@@ -176,7 +117,6 @@ if __name__ == "__main__":
     rp = RecipeParser()
     url = "https://fitmencook.com/recipes/gochujang-ramen-recipe/"
     rec = rp.get_recipe_jsonld(url)
-    if "recipeIngredient" in rec:
-        rec = rec["recipeIngredient"]
-    rec = rp.parse_recipe(rec)
-    print(rec)
+    if rec and "recipeIngredient" in rec:
+        parsed = rp.parse_recipe(rec["recipeIngredient"])
+        print(parsed)
