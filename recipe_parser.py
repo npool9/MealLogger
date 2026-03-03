@@ -21,13 +21,18 @@ class RecipeParser:
             'slice': 'slice', 'slices': 'slice',
         }
 
+    HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    }
+
     def fetch_page(self, url):
         """
         Fetch a URL and return a BeautifulSoup object.
         :param url: the url to fetch
         :return: BeautifulSoup object
         """
-        response = requests.get(url, timeout=15)
+        response = requests.get(url, headers=self.HEADERS, timeout=15)
         response.raise_for_status()
         return BeautifulSoup(response.text, 'html.parser')
 

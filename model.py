@@ -48,7 +48,7 @@ class Model:
     def check_for_meal(self, recipe_url):
         """
         Check the database for existence of a meal with the given recipe URL
-        :param recipe_url: the recipe URL to check (str)
+        :param recipe_url: the1 recipe URL to check (str)
         :return: the meal object, exist flag
         """
         query = "SELECT * FROM meals WHERE recipe_url = %s"

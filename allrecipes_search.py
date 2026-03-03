@@ -29,7 +29,7 @@ class AllRecipes(RecipeSearch):
         :return: the url to the recipe (str)
         """
         search_url = self._search_url + self.meal_name.replace(' ', '+')
-        r = requests.get(search_url, timeout=15)
+        r = requests.get(search_url, headers=self._rp.HEADERS, timeout=15)
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
 
