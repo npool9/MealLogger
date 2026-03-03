@@ -2,6 +2,7 @@ from ingredient_editor import IngredientEditor
 from meal_log_viewer import MealLogViewer
 from meals_browser import MealsBrowser
 from PyQt6.QtWidgets import QApplication
+from AppKit import NSApplication
 import sys
 
 
@@ -20,8 +21,11 @@ class View:
         """
         Get existing QApplication instance or create a new one.
         Prevents crash when launching multiple dialogs in one session.
+        Also activates the app on macOS so dialogs come to the front.
         """
-        return QApplication.instance() or QApplication(sys.argv)
+        app = QApplication.instance() or QApplication(sys.argv)
+        NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
+        return app
 
     def ask_for_action(self):
         """

@@ -300,7 +300,7 @@ class Model:
         # Scale to per-serving, then multiply by servings consumed
         recipe_servings = float(meal.servings) if meal.servings else 1
         for key in totals:
-            totals[key] = round((totals[key] / recipe_servings) * servings_consumed, 2)
+            totals[key] = round((float(totals[key]) / recipe_servings) * servings_consumed, 2)
         # Create and insert meal log
         meal_log = MealLog(
             meal_id=meal.id,
