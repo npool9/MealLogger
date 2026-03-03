@@ -119,7 +119,7 @@ class IngredientEditor(QDialog):
             "name": name,
             "notes": notes or None,
             "subsection": section or None,
-            "ingredient_type": "foundation",
+            "ingredient_type": "branded",
             "original": None,
         })
 
@@ -233,12 +233,12 @@ class IngredientEditor(QDialog):
 
         # ---- ENSURE VALUE EXISTS IMMEDIATELY ----
         if ing.get("ingredient_type") not in ("foundation", "branded"):
-            ing["ingredient_type"] = "foundation"
+            ing["ingredient_type"] = "branded"
 
-        if ing["ingredient_type"] == "branded":
-            rb_branded.setChecked(True)
-        else:
+        if ing["ingredient_type"] == "foundation":
             rb_foundation.setChecked(True)
+        else:
+            rb_branded.setChecked(True)
 
         def on_change():
             ing["ingredient_type"] = (
