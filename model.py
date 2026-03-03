@@ -45,14 +45,14 @@ class Model:
             print(f"Creating table {table}...")
             flyway.create_table(table)
 
-    def check_for_meal(self, meal_name):
+    def check_for_meal(self, recipe_url):
         """
-        Check the database for existence of a meal with the given name
-        :param meal_name; the name of the meal (str)
+        Check the database for existence of a meal with the given recipe URL
+        :param recipe_url: the recipe URL to check (str)
         :return: the meal object, exist flag
         """
-        query = "SELECT * FROM meals WHERE UPPER(name) = %s"
-        self._cursor.execute(query, (meal_name.upper(),))
+        query = "SELECT * FROM meals WHERE recipe_url = %s"
+        self._cursor.execute(query, (recipe_url,))
         row = self._cursor.fetchone()
         exists = True
         if not row:  # meal does not exist
@@ -60,6 +60,32 @@ class Model:
             exists = False
         meal = Meal(*row)
         return meal, exists
+
+    def get_ingredients_for_meal(self, meal):
+        """
+        Fetch all ingredients for an existing meal from the database,
+        including their per-gram nutrient values and amounts from the bridge table.
+        :param meal: Meal object with id set
+        :return: list of Ingredient objects with amount_grams populated
+        """
+        query = """
+            SELECT i.*, mib.quantity, mib.unit, mib.quantity_grams
+            FROM ingredients i
+            JOIN meal_ingredient_bridge mib ON i.id = mib.ingredient_id
+            WHERE mib.meal_id = %s
+        """
+        self._cursor.execute(query, (meal.id,))
+        rows = self._cursor.fetchall()
+        ingredients = []
+        for row in rows:
+            # ingredients table columns: id, name, calories_per_gram, ..., vitamin_d_per_gram (17 cols)
+            # then bridge columns: quantity, unit, quantity_grams
+            ing = Ingredient(*row[:17])
+            ing.amount = row[17]
+            ing.unit = row[18]
+            ing.amount_grams = row[19]
+            ingredients.append(ing)
+        return ingredients
 
     def scrape_meal(self, meal_name: str, website: str) -> tuple[Meal, list]:
         """
