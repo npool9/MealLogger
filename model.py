@@ -78,14 +78,45 @@ class Model:
         rows = self._cursor.fetchall()
         ingredients = []
         for row in rows:
-            # ingredients table columns: id, name, calories_per_gram, ..., vitamin_d_per_gram (17 cols)
+            # ingredients table columns: id, name, calories_per_gram, ..., vitamin_d_per_gram (18 cols)
             # then bridge columns: quantity, unit, quantity_grams
-            ing = Ingredient(*row[:17])
-            ing.amount = row[17]
-            ing.unit = row[18]
-            ing.amount_grams = row[19]
+            ing = Ingredient(*row[:18])
+            ing.amount = row[18]
+            ing.unit = row[19]
+            ing.amount_grams = row[20]
             ingredients.append(ing)
         return ingredients
+
+    def get_all_meal_logs(self):
+        """
+        Fetch all meal log entries with meal names.
+        :return: list of tuples (meal_name, date_eaten, servings_consumed, calories, protein, carbs, fat)
+        """
+        query = """
+            SELECT m.name, ml.date_eaten, ml.servings_consumed,
+                   ml.calories, ml.protein, ml.carbs, ml.fat
+            FROM meal_log ml
+            JOIN meals m ON ml.meal_id = m.id
+            ORDER BY ml.date_eaten DESC, ml.created_at DESC
+        """
+        self._cursor.execute(query)
+        return self._cursor.fetchall()
+
+    def get_all_meals(self):
+        """
+        Fetch all meals with their ingredient counts.
+        :return: list of tuples (meal_id, name, servings, recipe_url, ingredient_count)
+        """
+        query = """
+            SELECT m.id, m.name, m.servings, m.recipe_url,
+                   COUNT(mib.ingredient_id) as ingredient_count
+            FROM meals m
+            LEFT JOIN meal_ingredient_bridge mib ON m.id = mib.meal_id
+            GROUP BY m.id, m.name, m.servings, m.recipe_url
+            ORDER BY m.name
+        """
+        self._cursor.execute(query)
+        return self._cursor.fetchall()
 
     def scrape_meal(self, meal_name: str, website: str) -> tuple[Meal, list]:
         """
