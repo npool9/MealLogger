@@ -53,13 +53,35 @@ class FitMenCook(RecipeSearch):
 
         return recipe_url
 
-    def get_ingredients(self, meal):
+    def load_url(self, url):
+        """
+        Load a recipe page directly by URL, skipping search.
+        :param url: direct URL to the recipe page
+        :return: the url
+        """
+        self._recipe_soup = self._rp.fetch_page(url)
+
+        h1 = self._recipe_soup.find("h1", class_="fmc_title_1")
+        if h1:
+            self.meal.name = h1.get_text(strip=True)
+        else:
+            h1 = self._recipe_soup.find("h1")
+            if h1:
+                self.meal.name = h1.get_text(strip=True)
+
+        return url
+
+    def get_ingredients(self, meal, recipe_url=None):
         """
         Get list of ingredients
         :parameter meal: the (mostly) empty meal object
+        :parameter recipe_url: optional direct URL to skip search
         :return: list of ingredients for the recipe with measurements (list of str)
         """
-        recipe_url = self.search_for_meal()
+        if recipe_url:
+            self.load_url(recipe_url)
+        else:
+            recipe_url = self.search_for_meal()
         meal.recipe_url = recipe_url
         meal.website_name = self._name
 

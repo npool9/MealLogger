@@ -118,6 +118,43 @@ class Model:
         self._cursor.execute(query)
         return self._cursor.fetchall()
 
+    def detect_website(self, url):
+        """
+        Detect which supported website a URL belongs to.
+        :param url: recipe URL
+        :return: website key string (e.g. 'fitmencook', 'allrecipes')
+        """
+        domain_map = {
+            "fitmencook.com": "fitmencook",
+            "allrecipes.com": "allrecipes",
+        }
+        for domain, key in domain_map.items():
+            if domain in url:
+                return key
+        raise ValueError(f"Unsupported website URL: {url}")
+
+    def scrape_meal_from_url(self, url: str) -> tuple[Meal, list]:
+        """
+        Scrape a recipe directly from a URL.
+        :param url: direct URL to the recipe page
+        :return: tuple of (populated Meal object, list of parsed ingredients)
+        """
+        website = self.detect_website(url)
+        meal = Meal()
+        scrapers = {
+            "fitmencook": FitMenCook,
+            "allrecipes": AllRecipes,
+        }
+        search = scrapers[website](meal)
+        print("Getting ingredients list...")
+        ingredient_list = search.get_ingredients(meal, recipe_url=url)
+        print("Getting recipe description...")
+        meal.description = search.get_recipe_steps(meal)
+        print("Getting recipe servings...")
+        meal.servings = search.get_recipe_servings(meal)
+        meal.serving_size, meal.serving_unit = search.get_serving_size_and_unit(meal)
+        return meal, ingredient_list
+
     def scrape_meal(self, meal_name: str, website: str) -> tuple[Meal, list]:
         """
         Scrape a recipe website for meal details and ingredients.

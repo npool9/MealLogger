@@ -29,16 +29,24 @@ class View:
         :return: the chosen action string
         """
         print("\nWhat would you like to do?")
-        print("  1. Log a meal")
-        print("  2. View meal log")
-        print("  3. Browse saved meals")
-        print("  4. Exit")
+        print("  1. Log a meal (search)")
+        print("  2. Log a meal (from URL)")
+        print("  3. View meal log")
+        print("  4. Browse saved meals")
+        print("  5. Exit")
         while True:
             choice = input("Choose an option (number): ").strip()
-            actions = {"1": "log", "2": "view_log", "3": "browse_meals", "4": "exit"}
+            actions = {"1": "log", "2": "log_url", "3": "view_log", "4": "browse_meals", "5": "exit"}
             if choice in actions:
                 return actions[choice]
             print("Invalid choice. Please try again.")
+
+    def ask_for_url(self):
+        """
+        Ask the user for a recipe URL
+        :return: the URL (str)
+        """
+        return input("Paste the recipe URL: ").strip()
 
     def ask_for_meal(self):
         """
