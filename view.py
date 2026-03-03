@@ -31,15 +31,31 @@ class View:
         print("\nWhat would you like to do?")
         print("  1. Log a meal (search)")
         print("  2. Log a meal (from URL)")
-        print("  3. View meal log")
-        print("  4. Browse saved meals")
-        print("  5. Exit")
+        print("  3. Create custom recipe")
+        print("  4. View meal log")
+        print("  5. Browse saved meals")
+        print("  6. Exit")
         while True:
             choice = input("Choose an option (number): ").strip()
-            actions = {"1": "log", "2": "log_url", "3": "view_log", "4": "browse_meals", "5": "exit"}
+            actions = {"1": "log", "2": "log_url", "3": "create_custom",
+                       "4": "view_log", "5": "browse_meals", "6": "exit"}
             if choice in actions:
                 return actions[choice]
             print("Invalid choice. Please try again.")
+
+    def ask_for_recipe_details(self):
+        """
+        Ask the user for custom recipe name and servings.
+        :return: tuple of (recipe_name, servings)
+        """
+        name = input("Recipe name: ").strip()
+        while True:
+            servings = input("Number of servings: ").strip()
+            try:
+                int(servings)
+                return name, servings
+            except ValueError:
+                print("Please enter a valid number.")
 
     def ask_for_url(self):
         """

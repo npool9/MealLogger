@@ -64,6 +64,28 @@ def run():
             scraped_meal, ingredient_list = meal_logger._model.scrape_meal(meal_name, website)
             meal_logger.save_and_log(scraped_meal, ingredient_list)
 
+        elif action == "create_custom":
+            recipe_name, servings = meal_logger._view.ask_for_recipe_details()
+            ingredient_list = meal_logger._view.finalize_ingredients([])
+            if not ingredient_list:
+                print("No ingredients added. Skipping.")
+                continue
+            meal = Meal(name=recipe_name)
+            meal.servings = servings
+            meal.website_name = "custom"
+            print("Inserting meal into database...")
+            meal_logger._model.insert_meal(meal)
+            print("Fetching ingredients from USDA...")
+            ingredient_list = meal_logger._model.fetch_ingredients(ingredient_list)
+            print("Inserting ingredients into database...")
+            for ingredient in ingredient_list:
+                meal_logger._model.insert_ingredient(ingredient)
+            print("Inserting into meal-ingredient bridge...")
+            for ingredient in ingredient_list:
+                meal_logger._model.insert_meal_ingredient_bridge(meal, ingredient)
+            print("Calculating macros and inserting into meal_log...")
+            meal_logger._model.log_macros(meal, ingredient_list, servings_consumed=1)
+
         elif action == "log_url":
             url = meal_logger._view.ask_for_url()
             print("Fetching recipe from URL...")

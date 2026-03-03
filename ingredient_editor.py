@@ -99,13 +99,22 @@ class IngredientEditor(QDialog):
         section, _ = QInputDialog.getText(self, "Add Ingredient", "Section (optional):")
         notes, _ = QInputDialog.getMultiLineText(self, "Add Ingredient", "Notes (optional):")
 
-        if isinstance(amount, dict):
-            amount = f"{amount.get('min')}–{amount.get('max')}"
-        elif amount is None:
-            amount = ""
+        parsed_amount = None
+        if amount:
+            if '–' in amount or '-' in amount:
+                parts = amount.replace('–', '-').split('-')
+                parsed_amount = {
+                    "min": min(float(a) for a in parts),
+                    "max": max(float(a) for a in parts)
+                }
+            else:
+                try:
+                    parsed_amount = float(amount)
+                except ValueError:
+                    parsed_amount = amount
 
         self.ingredients.append({
-            "amount": amount,
+            "amount": parsed_amount,
             "unit": unit or None,
             "name": name,
             "notes": notes or None,
