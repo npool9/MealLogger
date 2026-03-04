@@ -543,7 +543,7 @@ class USDAService:
             "content-type": "application/json"
         }
         payload = {
-            "model": "claude-3-haiku-20240307",
+            "model": "claude-haiku-4-5-20251001",
             "max_tokens": 50,
             "messages": [{"role": "user", "content": prompt}]
         }
@@ -562,6 +562,60 @@ class USDAService:
             with open(self.grams_cache_file, 'w') as f:
                 json.dump(self.grams_cache, f, indent=2)
             print(f"[CLAUDE API] Result: {grams}g/cup (saved to cache)")
+            return grams
+        except Exception as e:
+            print(f"Claude parsing error: {e}")
+            return None
+
+    def estimate_grams(self, amount: float, unit: str, ingredient_name: str) -> float | None:
+        """
+        Use Claude to estimate grams for any amount + unit + ingredient combination.
+        For non-standard units like jar, can, bunch, etc.
+
+        :param amount: numeric amount
+        :param unit: unit string (e.g., "jar", "can", "bunch")
+        :param ingredient_name: name of the ingredient
+        :return: estimated grams, or None if failed
+        """
+        cache_key = f"{ingredient_name.lower().strip()}|{amount}|{unit.lower().strip()}"
+        if cache_key in self.grams_cache:
+            cached = self.grams_cache[cache_key]
+            print(f"[CACHE] {amount} {unit} {ingredient_name}: {cached}g")
+            return cached
+
+        if not self.anthropic_api_key:
+            print("Anthropic API key not set")
+            return None
+        url = "https://api.anthropic.com/v1/messages"
+        prompt = (
+            f"How many grams is {amount} {unit} of {ingredient_name}? "
+            f"Reply with just the number, nothing else."
+            f"If you need more info, just give your best estimate anyway."
+        )
+        headers = {
+            "x-api-key": self.anthropic_api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        }
+        payload = {
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 50,
+            "messages": [{"role": "user", "content": prompt}]
+        }
+
+        try:
+            print(f"[CLAUDE API] Querying: {amount} {unit} of {ingredient_name}...")
+            r = requests.post(url, headers=headers, json=payload)
+            if r.status_code != 200:
+                print(f"Claude API error: {r.status_code} - {r.text}")
+                return None
+            response = r.json()
+            text = response["content"][0]["text"].strip()
+            grams = float(text)
+            self.grams_cache[cache_key] = grams
+            with open(self.grams_cache_file, 'w') as f:
+                json.dump(self.grams_cache, f, indent=2)
+            print(f"[CLAUDE API] Result: {amount} {unit} {ingredient_name} = {grams}g (saved to cache)")
             return grams
         except Exception as e:
             print(f"Claude parsing error: {e}")
@@ -612,6 +666,11 @@ class USDAService:
                 grams_per_cup = self.estimate_grams_per_cup(ingredient_name)
                 if grams_per_cup:
                     return amount * requested_cups_factor * grams_per_cup
+        # 5. General Claude fallback for non-standard units (jar, can, bunch, etc.)
+        if ingredient_name:
+            grams = self.estimate_grams(amount, unit, ingredient_name)
+            if grams:
+                return grams
         raise ValueError(f"Cannot convert '{amount} {unit}' to grams: no conversion found")
 
 if __name__ == "__main__":

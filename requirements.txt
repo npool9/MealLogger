@@ -5,4 +5,3 @@ webdriver-manager
 beautifulsoup4
 PyQt6
 ingredient-parser-nlp
-cloudscraper

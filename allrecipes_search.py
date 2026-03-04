@@ -1,6 +1,6 @@
 from recipe_search import RecipeSearch
 from recipe_parser import RecipeParser
-import cloudscraper
+import requests
 from bs4 import BeautifulSoup
 import re
 
@@ -21,24 +21,34 @@ class AllRecipes(RecipeSearch):
         self._base_url = "https://www.allrecipes.com/"
         self._search_url = self._base_url + "search?q="
         self._rp = RecipeParser()
-        self._scraper = cloudscraper.create_scraper()
+        self._session = requests.Session()
+        self._session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Cookie": "euConsent=true",
+        })
         self._recipe_soup = None
 
     def search_for_meal(self):
         """
-        Search for the meal name on AllRecipes
+        Search for the meal name on AllRecipes.
         :return: the url to the recipe (str)
         """
         search_url = self._search_url + self.meal_name.replace(' ', '+')
-        r = self._scraper.get(search_url, timeout=15)
+        r = self._session.get(search_url, timeout=15)
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
 
-        # Find first recipe card link
-        recipe_card = soup.find("a", class_="mntl-card-list-card--extendable")
-        if not recipe_card or not recipe_card.get("href"):
-            raise ValueError(f"No recipes found on AllRecipes for '{self.meal_name}'")
-        recipe_url = recipe_card["href"]
+        # Find first recipe link in search results
+        recipe_url = None
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if href.startswith("https://www.allrecipes.com/recipe/"):
+                recipe_url = href
+                break
+
+        if not recipe_url:
+            raise ValueError(f"No AllRecipes recipes found for '{self.meal_name}'")
 
         # Fetch recipe page once and cache it
         self._recipe_soup = self._fetch_page(recipe_url)
@@ -52,11 +62,11 @@ class AllRecipes(RecipeSearch):
 
     def _fetch_page(self, url):
         """
-        Fetch a page using cloudscraper to bypass bot protection.
+        Fetch a page and return parsed HTML.
         :param url: the url to fetch
         :return: BeautifulSoup object
         """
-        r = self._scraper.get(url, timeout=15)
+        r = self._session.get(url, timeout=15)
         r.raise_for_status()
         return BeautifulSoup(r.text, "html.parser")
 
