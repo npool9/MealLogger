@@ -32,16 +32,17 @@ class View:
         :return: the chosen action string
         """
         print("\nWhat would you like to do?")
-        print("  1. Log a meal (search)")
-        print("  2. Log a meal (from URL)")
+        print("  1. Add a recipe (search)")
+        print("  2. Add a recipe (from URL)")
         print("  3. Create custom recipe")
-        print("  4. View meal log")
-        print("  5. Browse saved meals")
-        print("  6. Exit")
+        print("  4. Log a meal")
+        print("  5. View meal log")
+        print("  6. Browse saved meals")
+        print("  7. Exit")
         while True:
             choice = input("Choose an option (number): ").strip()
-            actions = {"1": "log", "2": "log_url", "3": "create_custom",
-                       "4": "view_log", "5": "browse_meals", "6": "exit"}
+            actions = {"1": "add_recipe", "2": "add_recipe_url", "3": "create_custom",
+                       "4": "log_meal", "5": "view_log", "6": "browse_meals", "7": "exit"}
             if choice in actions:
                 return actions[choice]
             print("Invalid choice. Please try again.")
@@ -73,6 +74,63 @@ class View:
         :return: the name of the meal (provided by the user)
         """
         return input("What meal did you eat?: ").strip()
+
+    def ask_for_meal_source(self):
+        """
+        Ask the user how they want to find the meal to log.
+        :return: 'existing', 'search', or 'url'
+        """
+        print("\nHow would you like to find the meal?")
+        print("  1. Choose from saved meals")
+        print("  2. Search for a new recipe")
+        print("  3. Add from URL")
+        while True:
+            choice = input("Choose an option (number): ").strip()
+            actions = {"1": "existing", "2": "search", "3": "url"}
+            if choice in actions:
+                return actions[choice]
+            print("Invalid choice. Please try again.")
+
+    def choose_existing_meal(self, meals):
+        """
+        Display saved meals and let the user pick one.
+        :param meals: list of tuples (id, name, servings, recipe_url, ingredient_count)
+        :return: selected meal tuple or None
+        """
+        if not meals:
+            print("No saved meals found.")
+            return None
+        print("\nSaved meals:")
+        for i, meal in enumerate(meals, 1):
+            print(f"  {i}. {meal[1]} ({meal[4]} ingredients, {meal[2]} servings)")
+        while True:
+            choice = input("Choose a meal (number, or 'q' to cancel): ").strip()
+            if choice.lower() == 'q':
+                return None
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(meals):
+                    return meals[idx]
+            except ValueError:
+                pass
+            print("Invalid choice. Please try again.")
+
+    def ask_for_servings(self):
+        """
+        Ask the user how many servings they consumed.
+        :return: number of servings (float)
+        """
+        while True:
+            s = input("How many servings did you consume? [1]: ").strip()
+            if not s:
+                return 1.0
+            try:
+                val = float(s)
+                if val > 0:
+                    return val
+                print("Please enter a positive number.")
+            except ValueError:
+                print("Please enter a valid number.")
 
     def ask_for_website(self, supported_websites):
         """

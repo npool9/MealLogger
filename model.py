@@ -294,6 +294,21 @@ class Model:
             print("Unit:", ing.unit)
         return ingredients_list
 
+    def save_meal(self, meal, ingredient_list, view=None):
+        """
+        Save a meal and its ingredients to the database without logging consumption.
+        :param meal: Meal object (id will be set after insert)
+        :param ingredient_list: list of parsed ingredient dicts from scraper/editor
+        :param view: View instance for showing food chooser dialog
+        :return: tuple of (meal, list of hydrated Ingredient objects)
+        """
+        self.insert_meal(meal)
+        ingredients = self.fetch_ingredients(ingredient_list, view=view)
+        for ing in ingredients:
+            self.insert_ingredient(ing)
+            self.insert_meal_ingredient_bridge(meal, ing)
+        return meal, ingredients
+
     def log_macros(self, meal, ingredients, servings_consumed=1, date_eaten=None):
         """
         Log a meal's macros to the meal_log table.
