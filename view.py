@@ -2,7 +2,6 @@ from ingredient_editor import IngredientEditor
 from meal_log_viewer import MealLogViewer
 from meals_browser import MealsBrowser
 from PyQt6.QtWidgets import QApplication
-from AppKit import NSApplication
 import sys
 
 
@@ -24,7 +23,6 @@ class View:
         Also activates the app on macOS so dialogs come to the front.
         """
         app = QApplication.instance() or QApplication(sys.argv)
-        NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
         return app
 
     def ask_for_action(self):

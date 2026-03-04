@@ -1,6 +1,6 @@
 from recipe_search import RecipeSearch
 from recipe_parser import RecipeParser
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 import re
 
@@ -21,6 +21,7 @@ class AllRecipes(RecipeSearch):
         self._base_url = "https://www.allrecipes.com/"
         self._search_url = self._base_url + "search?q="
         self._rp = RecipeParser()
+        self._scraper = cloudscraper.create_scraper()
         self._recipe_soup = None
 
     def search_for_meal(self):
@@ -29,7 +30,7 @@ class AllRecipes(RecipeSearch):
         :return: the url to the recipe (str)
         """
         search_url = self._search_url + self.meal_name.replace(' ', '+')
-        r = requests.get(search_url, headers=self._rp.HEADERS, timeout=15)
+        r = self._scraper.get(search_url, timeout=15)
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
 
@@ -40,7 +41,7 @@ class AllRecipes(RecipeSearch):
         recipe_url = recipe_card["href"]
 
         # Fetch recipe page once and cache it
-        self._recipe_soup = self._rp.fetch_page(recipe_url)
+        self._recipe_soup = self._fetch_page(recipe_url)
 
         # Extract title from the page
         h1 = self._recipe_soup.find("h1")
@@ -49,13 +50,23 @@ class AllRecipes(RecipeSearch):
 
         return recipe_url
 
+    def _fetch_page(self, url):
+        """
+        Fetch a page using cloudscraper to bypass bot protection.
+        :param url: the url to fetch
+        :return: BeautifulSoup object
+        """
+        r = self._scraper.get(url, timeout=15)
+        r.raise_for_status()
+        return BeautifulSoup(r.text, "html.parser")
+
     def load_url(self, url):
         """
         Load a recipe page directly by URL, skipping search.
         :param url: direct URL to the recipe page
         :return: the url
         """
-        self._recipe_soup = self._rp.fetch_page(url)
+        self._recipe_soup = self._fetch_page(url)
 
         h1 = self._recipe_soup.find("h1")
         if h1:
@@ -77,7 +88,7 @@ class AllRecipes(RecipeSearch):
         meal.recipe_url = recipe_url
         meal.website_name = self._name
 
-        soup = self._recipe_soup or self._rp.fetch_page(recipe_url)
+        soup = self._recipe_soup or self._fetch_page(recipe_url)
         ingredient_lines = []
 
         # Try JSON-LD first
@@ -127,7 +138,7 @@ class AllRecipes(RecipeSearch):
         Get the description of the given recipe
         :param meal: the meal object
         """
-        soup = self._recipe_soup or self._rp.fetch_page(meal.recipe_url)
+        soup = self._recipe_soup or self._fetch_page(meal.recipe_url)
 
         # Try JSON-LD first
         rec = self._rp.get_recipe_jsonld(meal.recipe_url, soup=soup)
@@ -159,7 +170,7 @@ class AllRecipes(RecipeSearch):
         Get the servings for this recipe
         :param meal: the meal object
         """
-        soup = self._recipe_soup or self._rp.fetch_page(meal.recipe_url)
+        soup = self._recipe_soup or self._fetch_page(meal.recipe_url)
 
         # Try JSON-LD recipeYield
         rec = self._rp.get_recipe_jsonld(meal.recipe_url, soup=soup)

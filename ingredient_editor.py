@@ -207,6 +207,10 @@ class IngredientEditor(QDialog):
         """
         Bring the window to the front
         """
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        self.show()
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, False)
+        self.show()
         self.raise_()
         self.activateWindow()
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
