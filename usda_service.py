@@ -1,4 +1,5 @@
 import json
+import math
 import re
 import requests
 
@@ -406,13 +407,14 @@ class USDAService:
                     portions["cup"][modifier] = grams_per_cup
         return portions
 
-    def search_food(self, food_keywords: str, food_type: str="foundation", target_unit: str=None):
+    def _build_search_url(self, food_keywords: str, food_type: str, page: int = 1, page_size: int = 10) -> str:
         """
-        Search for food nutrient information and portion data by keyword(s).
-        :param food_keywords: the keywords to search for food in USDA database
+        Build USDA food search URL with pagination parameters.
+        :param food_keywords: search keywords
         :param food_type: foundation, sr_legacy, or branded
-        :param target_unit: reserved for future use (e.g., grams to volume conversion)
-        :return: dict with 'nutrients' and 'portions' keys
+        :param page: page number (1-indexed)
+        :param page_size: results per page
+        :return: fully-formed URL string
         """
         food_keywords = food_keywords.replace(' ', "%20")
         if food_type == "branded":
@@ -423,20 +425,43 @@ class USDAService:
             url = f"{self.base_url}{self.food_search_endpoint}?query={food_keywords}&dataType=SR%20Legacy&api_key={self.api_key}"
         else:
             raise Exception(f"Invalid food type: {food_type} not in [branded, foundation, sr_legacy]")
+        url += f"&pageSize={page_size}&pageNumber={page}"
+        return url
+
+    def search_foods_paginated(self, food_keywords: str, food_type: str = "branded", page: int = 1, page_size: int = 10):
+        """
+        Search USDA and return raw results with pagination metadata.
+        :param food_keywords: keywords to search
+        :param food_type: foundation, sr_legacy, or branded
+        :param page: page number (1-indexed)
+        :param page_size: results per page
+        :return: dict with 'foods' list, 'totalHits', 'currentPage', 'totalPages'
+        """
+        url = self._build_search_url(food_keywords, food_type, page, page_size)
         r = requests.get(url)
         if r.status_code != 200:
             raise Exception(f"Couldn't get food search response for \"{food_keywords}\"")
-        r = r.json()
-        foods = r["foods"]
+        data = r.json()
+        total_hits = data.get("totalHits", 0)
+        total_pages = math.ceil(total_hits / page_size) if total_hits > 0 else 1
+        return {
+            "foods": data.get("foods", []),
+            "totalHits": total_hits,
+            "currentPage": page,
+            "totalPages": total_pages,
+        }
 
-        # Use first result
-        food_info = foods[0]
+    def build_food_result(self, food_info: dict) -> dict:
+        """
+        Take a single food dict from the USDA search API and return a
+        processed result with nutrients and portion conversions.
+        :param food_info: a single food dict from the 'foods' list
+        :return: dict with 'name', 'fdcId', 'nutrients', 'portions'
+        """
         portions = self.get_food_portion_conversions(food_info["fdcId"]) if "fdcId" in food_info else {}
+        print(f"USDA: {food_info['description']} (fdcId: {food_info.get('fdcId')})")
 
-        print(f"USDA: {url} -> {food_info['description']} (fdcId: {food_info.get('fdcId')})")
-
-        # Extract nutrients
-        nutrients = food_info["foodNutrients"]
+        nutrients = list(food_info.get("foodNutrients", []))
         keys_to_remove = ["nutrientId", "nutrientNumber", "derivationCode", "derivationDescription", "derivationId",
                           "foodNutrientSourceId", "foodNutrientSourceCode", "foodNutrientSourceDescription", "rank",
                           "indentLevel", "foodNutrientId", "dataPoints", "min", "max", "median"]
@@ -448,8 +473,23 @@ class USDAService:
             "name": food_info["description"],
             "fdcId": food_info.get("fdcId"),
             "nutrients": nutrients,
-            "portions": portions
+            "portions": portions,
         }
+
+    def search_food(self, food_keywords: str, food_type: str="foundation", target_unit: str=None):
+        """
+        Search for food nutrient information and portion data by keyword(s).
+        Auto-selects the first result.
+        :param food_keywords: the keywords to search for food in USDA database
+        :param food_type: foundation, sr_legacy, or branded
+        :param target_unit: reserved for future use (e.g., grams to volume conversion)
+        :return: dict with 'nutrients' and 'portions' keys
+        """
+        result = self.search_foods_paginated(food_keywords, food_type, page=1, page_size=10)
+        foods = result["foods"]
+        if not foods:
+            raise Exception(f"No results found for \"{food_keywords}\"")
+        return self.build_food_result(foods[0])
 
     def convert_nutrient_unit(self, value, from_unit, to_unit, nutrient_name=None):
         """

@@ -34,7 +34,7 @@ class MealLogger:
             print("Inserting meal object into database")
             self._model.insert_meal(scraped_meal)
             print("Fetching ingredients for meal...")
-            ingredient_list = self._model.fetch_ingredients(ingredient_list)
+            ingredient_list = self._model.fetch_ingredients(ingredient_list, view=self._view)
             print("Inserting ingredients into database...")
             for ingredient in ingredient_list:
                 self._model.insert_ingredient(ingredient)
@@ -76,7 +76,7 @@ def run():
             print("Inserting meal into database...")
             meal_logger._model.insert_meal(meal)
             print("Fetching ingredients from USDA...")
-            ingredient_list = meal_logger._model.fetch_ingredients(ingredient_list)
+            ingredient_list = meal_logger._model.fetch_ingredients(ingredient_list, view=meal_logger._view)
             print("Inserting ingredients into database...")
             for ingredient in ingredient_list:
                 meal_logger._model.insert_ingredient(ingredient)

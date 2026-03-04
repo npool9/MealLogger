@@ -31,5 +31,8 @@
   "celery": 101.0,
   "celery seed": 120.0,
   "chicken broth": 240.0,
-  "milk": 240.0
+  "milk": 240.0,
+  "fajita seasoning|1.0|packet": 28.0,
+  "cheddar cheese|1.0|package": 227.0,
+  "monterey jack cheese|1.0|package": 227.0
 }

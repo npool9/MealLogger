@@ -212,10 +212,11 @@ class Model:
             # lookup nutrition information about ingredient
             pass
 
-    def fetch_ingredients(self, ingredients: list[dict]) -> list[Ingredient]:
+    def fetch_ingredients(self, ingredients: list[dict], view=None) -> list[Ingredient]:
         """
         Query the USDA API for nutritional data and build Ingredient objects.
         For each parsed ingredient, search the USDA FoodData Central database,
+        show a chooser dialog so the user can pick the right match,
         retrieve nutrient values, convert them to per-gram amounts, and
         populate an Ingredient object.
         :param ingredients: Parsed ingredient dicts, each containing:
@@ -225,12 +226,36 @@ class Model:
             - name: ingredient name to search for
             - notes
             - ingredient_type: 'foundation' or 'branded'
+        :param view: View instance for showing the food chooser dialog
         :return: List of Ingredient objects with nutrient fields populated
         """
         usda = USDAService()
         ingredients_list = []
         for ingredient in ingredients:
-            food_info = usda.search_food(ingredient["name"], food_type=ingredient["ingredient_type"], target_unit=ingredient.get("unit"))
+            food_type = ingredient["ingredient_type"]
+            name = ingredient["name"]
+
+            if view:
+                # Paginated search with user selection
+                result = usda.search_foods_paginated(name, food_type)
+                if not result["foods"]:
+                    print(f"No USDA results found for \"{name}\", skipping.")
+                    continue
+                pagination = {
+                    "totalHits": result["totalHits"],
+                    "currentPage": result["currentPage"],
+                    "totalPages": result["totalPages"],
+                }
+                search_callback = lambda page, _name=name, _ft=food_type: usda.search_foods_paginated(_name, _ft, page=page)
+                selected = view.show_food_chooser(name, result["foods"], pagination, search_callback)
+                if selected is None:
+                    print(f"User skipped selection for \"{name}\", using first result.")
+                    selected = result["foods"][0]
+                food_info = usda.build_food_result(selected)
+            else:
+                # Fallback: auto-select first result (original behavior)
+                food_info = usda.search_food(name, food_type=food_type, target_unit=ingredient.get("unit"))
+
             print(food_info["portions"])
             ing = Ingredient(name=food_info["name"].title())
             # Parse nutrient fields and convert to per-gram values

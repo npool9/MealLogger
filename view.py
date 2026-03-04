@@ -1,6 +1,7 @@
 from ingredient_editor import IngredientEditor
 from meal_log_viewer import MealLogViewer
 from meals_browser import MealsBrowser
+from usda_food_chooser import USDAFoodChooser
 from PyQt6.QtWidgets import QApplication
 import sys
 
@@ -113,6 +114,23 @@ class View:
         window = MealLogViewer(meal_logs)
         window.bring_to_front()
         window.exec()
+
+    def show_food_chooser(self, ingredient_name, foods, pagination, search_callback):
+        """
+        Launch USDAFoodChooser dialog. Returns selected food dict or None.
+        :param ingredient_name: ingredient name for window title context
+        :param foods: list of food dicts from first page
+        :param pagination: dict with totalHits, currentPage, totalPages
+        :param search_callback: callable(page) -> paginated result dict
+        :return: selected food dict or None if cancelled
+        """
+        app = self._get_app()
+        window = USDAFoodChooser(ingredient_name, foods, pagination, search_callback)
+        window.bring_to_front()
+        result = window.exec()
+        if result == USDAFoodChooser.DialogCode.Accepted and window.selected_food:
+            return window.selected_food
+        return None
 
     def show_meals_browser(self, meals, get_ingredients_callback):
         """
